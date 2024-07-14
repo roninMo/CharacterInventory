@@ -55,9 +55,9 @@ bool UInventoryComponent::TryAddItem_Implementation(const FName Id, UObject* Inv
 }
 
 
-void UInventoryComponent::Server_TryAddItem_Implementation(FName Id, UObject* InventoryItemInterface, const EItemType Type)
+void UInventoryComponent::Server_TryAddItem_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type)
 {
-	TScriptInterface<IInventoryItemInterface> InventoryItem = InventoryItemInterface;
+	const TScriptInterface<IInventoryItemInterface> InventoryItem = InventoryItemInterface;
 	bool bSuccessfullyAddedItem;
 	
 	// Adding an item by id
@@ -426,10 +426,10 @@ TMap<FGuid, F_Item>& UInventoryComponent::GetInventoryList(EItemType InventorySe
 }
 
 
-bool UInventoryComponent::GetDataBaseItem_Implementation(FName Id, F_Item& Item)
+bool UInventoryComponent::GetDataBaseItem_Implementation(const FName Id, F_Item& Item)
 {
 	if (!ItemDatabase || Id.IsNone()) return false;
-	if (const F_Table_ItemData* ItemData = ItemDatabase->FindRow<F_Table_ItemData>(Id, TEXT("Inventory Item Data Context")))
+	if (const FInventory_ItemDatabase* ItemData = ItemDatabase->FindRow<FInventory_ItemDatabase>(Id, TEXT("Inventory Item Data Context")))
 	{
 		Item.Id = FGuid::NewGuid();
 		Item = ItemData->ItemInformation;

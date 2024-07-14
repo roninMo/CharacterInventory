@@ -64,7 +64,7 @@ protected:
 	 * @note If the item isn't successfully added then @ref HandleItemAdditionFail should be called, otherwise @ref HandleItemAdditionSuccess is called
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 * */
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Add Item Pending (Client Logic)"))
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Pending Add Item (Client Logic)"))
 	void AddItemPendingClientLogic(const FName Id, UObject* InventoryItemInterface, const EItemType Type);
 	virtual void AddItemPendingClientLogic_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type);
 	
@@ -134,7 +134,7 @@ protected:
 	 * @note If the item isn't successfully transferred then @ref HandleTransferItemAdditionFail should be called, otherwise @ref HandleTransferItemAdditionSuccess is called
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 * */
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Transfer Item Pending (Client Logic)"))
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Pending Transfer Item (Client Logic)"))
 	void TransferItemPendingClientLogic(const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type);
 	virtual void TransferItemPendingClientLogic_Implementation(const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type);
 	
@@ -202,7 +202,7 @@ protected:
 	 * @note If the item isn't successfully removed then @ref HandleRemoveItemAdditionFail should be called, otherwise @ref HandleRemoveItemAdditionSuccess is called
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 * */
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Remove Item Pending (Client Logic)"))
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Pending Remove Item (Client Logic)"))
 	void RemoveItemPendingClientLogic(const FGuid& Id, const EItemType Type, bool bDropItem);
 	virtual void RemoveItemPendingClientLogic_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem);
 	

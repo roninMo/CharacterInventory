@@ -174,7 +174,7 @@ public:
 * @ref I would add the unique information using another object that's linked to the item, for performance reasons. Otherwise you'll have to refactor networking code and that impacts performance 
 */
 USTRUCT(BlueprintType)
-struct F_Table_ItemData : public FTableRowBase
+struct FInventory_ItemDatabase : public FTableRowBase
 {
 	GENERATED_BODY()
 

@@ -89,7 +89,7 @@ bool ABaseItem::RetrieveItemFromDataTable(const FName Id, F_Item& ItemData)
 	if (ItemInformationTable)
 	{
 		const FString RowContext(TEXT("Item Information Context"));
-		if (const F_Table_ItemData* Data = ItemInformationTable->FindRow<F_Table_ItemData>(Id, RowContext))
+		if (const FInventory_ItemDatabase* Data = ItemInformationTable->FindRow<FInventory_ItemDatabase>(Id, RowContext))
 		{
 			ItemData = Data->ItemInformation;
 			return true;
