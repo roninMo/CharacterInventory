@@ -7,9 +7,10 @@
 #include "UObject/Interface.h"
 #include "InventoryInterface.generated.h"
 
-enum class EItemType : uint8;
 class IInventoryItemInterface;
 class ABaseItem;
+
+
 // This class does not need to be modified.
 UINTERFACE(Blueprintable)
 class UInventoryInterface : public UInterface
@@ -44,17 +45,17 @@ public:
 	 *				- HandleItemAdditionFail
 	 *				- HandleItemAdditionSuccess
 	 * 
-	 * @param Id					The database id for this item. (If the item isn't already spawned in the world, retrieve the object from the database)
-	 * @param InventoryItem			The reference to the actor spawned in the world, if there is one (and you want it to be deleted upon completion).
-	 * @param Type					The item type (used for item allocation)
+	 * @param Id										The database id for this item. (If the item isn't already spawned in the world, retrieve the object from the database)
+	 * @param InventoryItemInterface					The reference to the actor spawned in the world, if there is one (and you want it to be deleted upon completion).
+	 * @param Type										The item type (used for item allocation)
 	 * @returns		True if the item was found in the database and successfully added to the inventory.
 	 * 
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 * @note For handling the ui, I'd add delegates on the response functions for update notifications on the player's inventory
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory", meta = (DisplayName = "Try Add Item"))
-	bool TryAddItem(const FName Id, UPARAM(ref) TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
-	virtual bool TryAddItem_Implementation(const FName Id, UPARAM(ref) TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
+	bool TryAddItem(const FName Id, UObject* InventoryItemInterface, const EItemType Type);
+	virtual bool TryAddItem_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type);
 
 	
 protected:
@@ -64,12 +65,12 @@ protected:
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 * */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Add Item Pending (Client Logic)"))
-	void AddItemPendingClientLogic(const FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
-	virtual void AddItemPendingClientLogic_Implementation(const FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
+	void AddItemPendingClientLogic(const FName Id, UObject* InventoryItemInterface, const EItemType Type);
+	virtual void AddItemPendingClientLogic_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type);
 	
 	/** Server/Client procedure calls are not valid on interfaces, these need to be handled in the actual implementation */
-	// UFUNCTION(Server, Reliable) void Server_TryAddItem(FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
-	// UFUNCTION(Client, Reliable) void Client_AddItemResponse(const bool bSuccess, FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
+	// UFUNCTION(Server, Reliable) void Server_TryAddItem(FName Id, UObject* InventoryItemInterface, const EItemType Type);
+	// UFUNCTION(Client, Reliable) void Client_AddItemResponse(const bool bSuccess, FName Id, UObject* InventoryItemInterface, const EItemType Type);
 	
 	/**
 	 * The actual logic that handles adding the item to an inventory component
@@ -77,24 +78,24 @@ protected:
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Handle Add Item"))
-	FGuid HandleAddItem(const FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
-	virtual FGuid HandleAddItem_Implementation(const FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
+	FGuid HandleAddItem(const FName Id, UObject* InventoryItemInterface, const EItemType Type);
+	virtual FGuid HandleAddItem_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type);
 	
 	/**
 	 * If the item was not added to the inventory
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Handle Add Item (Failed)"))
-	void HandleItemAdditionFail(const FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
-	virtual void HandleItemAdditionFail_Implementation(const FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
+	void HandleItemAdditionFail(const FName Id, UObject* InventoryItemInterface, const EItemType Type);
+	virtual void HandleItemAdditionFail_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type);
 
 	/**
 	 * If the item was successfully added to the inventory
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Handle Add Item (Succeeded)"))
-	void HandleItemAdditionSuccess(const FGuid& Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
-	virtual void HandleItemAdditionSuccess_Implementation(const FGuid& Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
+	void HandleItemAdditionSuccess(const FGuid& Id, UObject* InventoryItemInterface, const EItemType Type);
+	virtual void HandleItemAdditionSuccess_Implementation(const FGuid& Id, UObject* InventoryItemInterface, const EItemType Type);
 
 
 //----------------------------------------------------------------------------------//
@@ -123,8 +124,8 @@ public:
 	 * @note For handling the ui, I'd add delegates on the response functions for update notifications on the player's inventory
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory", meta = (DisplayName = "Try Transfer Item"))
-	bool TryTransferItem(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type);
-	virtual bool TryTransferItem_Implementation(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type);
+	bool TryTransferItem(const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type);
+	virtual bool TryTransferItem_Implementation(const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type);
 
 	
 protected:
@@ -134,12 +135,12 @@ protected:
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 * */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Transfer Item Pending (Client Logic)"))
-	void TransferItemPendingClientLogic(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type);
-	virtual void TransferItemPendingClientLogic_Implementation(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type);
+	void TransferItemPendingClientLogic(const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type);
+	virtual void TransferItemPendingClientLogic_Implementation(const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type);
 	
 	/** Server/Client procedure calls are not valid on interfaces, these need to be handled in the actual implementation */
-	// UFUNCTION(Server, Reliable) void Server_TryTransferItem(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type);
-	// UFUNCTION(Client, Reliable) void Client_TransferItemResponse(const bool bSuccess, const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type);
+	// UFUNCTION(Server, Reliable) void Server_TryTransferItem(const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type);
+	// UFUNCTION(Client, Reliable) void Client_TransferItemResponse(const bool bSuccess, const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type);
 	
 	/**
 	 * The actual logic that handles transferring the item to the other inventory component
@@ -147,24 +148,24 @@ protected:
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Handle Transfer Item"))
-	bool HandleTransferItem(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type, bool& bFromThisInventory);
-	virtual bool HandleTransferItem_Implementation(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type, bool& bFromThisInventory);
+	bool HandleTransferItem(const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type, bool& bFromThisInventory);
+	virtual bool HandleTransferItem_Implementation(const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type, bool& bFromThisInventory);
 	
 	/**
 	 * If the item was not transferred to the other inventory 
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Handle Transfer Item (Failed"))
-	void HandleTransferItemFail(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, bool bFromThisInventory);
-	virtual void HandleTransferItemFail_Implementation(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, bool bFromThisInventory);
+	void HandleTransferItemFail(const FGuid& Id, UObject* OtherInventoryInterface, bool bFromThisInventory);
+	virtual void HandleTransferItemFail_Implementation(const FGuid& Id, UObject* OtherInventoryInterface, bool bFromThisInventory);
 
 	/**
 	 * If the item was successfully transferred to the other inventory 
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Handle Transfer Item (Succeeded)"))
-	void HandleTransferItemSuccess(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, bool bFromThisInventory);
-	virtual void HandleTransferItemSuccess_Implementation(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, bool bFromThisInventory);
+	void HandleTransferItemSuccess(const FGuid& Id, UObject* OtherInventoryInterface, bool bFromThisInventory);
+	virtual void HandleTransferItemSuccess_Implementation(const FGuid& Id, UObject* OtherInventoryInterface, bool bFromThisInventory);
 
 	
 //----------------------------------------------------------------------------------//
@@ -207,7 +208,7 @@ protected:
 	
 	/** Server/Client procedure calls are not valid on interfaces, these need to be handled in the actual implementation */
 	// UFUNCTION(Server, Reliable) void Server_TryRemoveItem(const FGuid& Id, const EItemType Type, bool bDropItem);
-	// UFUNCTION(Client, Reliable) void Client_RemoveItemResponse(const bool bSuccess, const FGuid& Id, const EItemType Type, bool bDropItem, TScriptInterface<IInventoryItemInterface> InventoryItemInterface);
+	// UFUNCTION(Client, Reliable) void Client_RemoveItemResponse(const bool bSuccess, const FGuid& Id, const EItemType Type, bool bDropItem, UObject* SpawnedItem);
 	
 	/**
 	 * The actual logic that handles removing the item from the inventory component
@@ -215,24 +216,24 @@ protected:
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Handle Remove Item"))
-	bool HandleRemoveItem(const FGuid& Id, const EItemType Type, bool bDropItem, UPARAM(ref) TScriptInterface<IInventoryItemInterface>& SpawnedItem);
-	virtual bool HandleRemoveItem_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem, TScriptInterface<IInventoryItemInterface>& SpawnedItem);
+	bool HandleRemoveItem(const FGuid& Id, const EItemType Type, bool bDropItem, UObject*& SpawnedItem);
+	virtual bool HandleRemoveItem_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem, UObject*& SpawnedItem);
 	
 	/**
 	 * If the item was not removed from the inventory 
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Handle Remove Item (Failed)"))
-	void HandleRemoveItemFail(const FGuid& Id, const EItemType Type, bool bDropItem, TScriptInterface<IInventoryItemInterface> SpawnedItem);
-	virtual void HandleRemoveItemFail_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem, TScriptInterface<IInventoryItemInterface> SpawnedItem);
+	void HandleRemoveItemFail(const FGuid& Id, const EItemType Type, bool bDropItem, UObject* SpawnedItem);
+	virtual void HandleRemoveItemFail_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem, UObject* SpawnedItem);
 
 	/**
 	 * If the item was successfully removed from the inventory
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Handle Remove Item (Succeeded)"))
-	void HandleRemoveItemSuccess(const FGuid& Id, const EItemType Type, bool bDropItem, TScriptInterface<IInventoryItemInterface> SpawnedItem);
-	virtual void HandleRemoveItemSuccess_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem, TScriptInterface<IInventoryItemInterface> SpawnedItem);
+	void HandleRemoveItemSuccess(const FGuid& Id, const EItemType Type, bool bDropItem, UObject* SpawnedItem);
+	virtual void HandleRemoveItemSuccess_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem, UObject* SpawnedItem);
 	
 	
 //----------------------------------------------------------------------------------//

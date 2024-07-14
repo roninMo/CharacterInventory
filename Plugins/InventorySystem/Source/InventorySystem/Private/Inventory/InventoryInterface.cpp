@@ -4,47 +4,47 @@
 #include "Inventory/InventoryInterface.h"
 
 // Add default functionality here for any IInventoryInterface functions that are not pure virtual.
-bool IInventoryInterface::TryAddItem_Implementation(const FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type)
+bool IInventoryInterface::TryAddItem_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type)
 {
 	return false;
 }
 
-void IInventoryInterface::AddItemPendingClientLogic_Implementation(const FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type)
+void IInventoryInterface::AddItemPendingClientLogic_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type)
 {
 }
 
-FGuid IInventoryInterface::HandleAddItem_Implementation(const FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type)
+FGuid IInventoryInterface::HandleAddItem_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type)
 {
 	return FGuid();
 }
 
-void IInventoryInterface::HandleItemAdditionFail_Implementation(const FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type)
+void IInventoryInterface::HandleItemAdditionFail_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type)
 {
 }
 
-void IInventoryInterface::HandleItemAdditionSuccess_Implementation(const FGuid& Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type)
+void IInventoryInterface::HandleItemAdditionSuccess_Implementation(const FGuid& Id, UObject* InventoryItemInterface, const EItemType Type)
 {
 }
 
-bool IInventoryInterface::TryTransferItem_Implementation(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type)
-{
-	return false;
-}
-
-void IInventoryInterface::TransferItemPendingClientLogic_Implementation(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type)
-{
-}
-
-bool IInventoryInterface::HandleTransferItem_Implementation(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type, bool& bFromThisInventory)
+bool IInventoryInterface::TryTransferItem_Implementation(const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type)
 {
 	return false;
 }
 
-void IInventoryInterface::HandleTransferItemFail_Implementation(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, bool bFromThisInventory)
+void IInventoryInterface::TransferItemPendingClientLogic_Implementation(const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type)
 {
 }
 
-void IInventoryInterface::HandleTransferItemSuccess_Implementation(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, bool bFromThisInventory)
+bool IInventoryInterface::HandleTransferItem_Implementation(const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type, bool& bFromThisInventory)
+{
+	return false;
+}
+
+void IInventoryInterface::HandleTransferItemFail_Implementation(const FGuid& Id, UObject* OtherInventoryInterface, bool bFromThisInventory)
+{
+}
+
+void IInventoryInterface::HandleTransferItemSuccess_Implementation(const FGuid& Id, UObject* OtherInventoryInterface, bool bFromThisInventory)
 {
 }
 
@@ -57,18 +57,19 @@ void IInventoryInterface::RemoveItemPendingClientLogic_Implementation(const FGui
 {
 }
 
-bool IInventoryInterface::HandleRemoveItem_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem, TScriptInterface<IInventoryItemInterface>& SpawnedItem)
+bool IInventoryInterface::HandleRemoveItem_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem, UObject*& SpawnedItem)
 {
 	return false;
 }
 
-void IInventoryInterface::HandleRemoveItemFail_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem, TScriptInterface<IInventoryItemInterface> SpawnedItem)
+void IInventoryInterface::HandleRemoveItemFail_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem, UObject* SpawnedItem)
 {
 }
 
-void IInventoryInterface::HandleRemoveItemSuccess_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem, TScriptInterface<IInventoryItemInterface> SpawnedItem)
+void IInventoryInterface::HandleRemoveItemSuccess_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem, UObject* SpawnedItem)
 {
 }
+
 
 F_Item IInventoryInterface::InternalGetInventoryItem_Implementation(const FGuid& Id, EItemType InventorySectionToSearch)
 {
