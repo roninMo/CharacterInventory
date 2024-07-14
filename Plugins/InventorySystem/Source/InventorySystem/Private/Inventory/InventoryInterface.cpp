@@ -93,6 +93,11 @@ bool IInventoryInterface::GetDataBaseItem_Implementation(FName Id, F_Item& Item)
 	return false;
 }
 
+F_Item* IInventoryInterface::CreateInventoryObject() const
+{
+	return new F_Item();
+}
+
 TScriptInterface<IInventoryItemInterface> IInventoryInterface::SpawnWorldItem_Implementation(const F_Item& Item)
 {
 	return nullptr;

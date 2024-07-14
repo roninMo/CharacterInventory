@@ -41,13 +41,13 @@ bool UInventoryComponent::TryAddItem_Implementation(const FName Id, TScriptInter
 	if (Character->IsLocallyControlled())
 	{
 		AddItemPendingClientLogic(Id, InventoryItem, Type);
-		Server_TryAddItem(Id, InventoryItem, Type);
+		Server_TryAddItem(Id, InventoryItem.GetObject(), Type);
 		return true; // Just return true by default and let the client rpc response handle everything else
 	}
 	else if (Character->HasAuthority())
 	{
 		const FGuid ItemId = HandleAddItem(Id, InventoryItem, Type);
-		Client_AddItemResponse(ItemId.IsValid() ? true : false, Id, InventoryItem, Type);
+		Client_AddItemResponse(ItemId.IsValid() ? true : false, Id, InventoryItem.GetObject(), Type);
 		return true;
 	}
 
@@ -55,12 +55,17 @@ bool UInventoryComponent::TryAddItem_Implementation(const FName Id, TScriptInter
 }
 
 
-void UInventoryComponent::Server_TryAddItem_Implementation(FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type)
+void UInventoryComponent::Server_TryAddItem_Implementation(FName Id, UObject* InventoryInterface, const EItemType Type)
 {
+	const TScriptInterface<IInventoryItemInterface> InventoryItem = InventoryInterface;
 	bool bSuccessfullyAddedItem;
 	
 	// Adding an item by id
-	if (!InventoryItem) bSuccessfullyAddedItem = HandleAddItem(Id, InventoryItem, Type) ? true : false;
+	if (!InventoryItem)
+	{
+		const FGuid ItemId = HandleAddItem(Id, nullptr, Type);
+		bSuccessfullyAddedItem = ItemId.IsValid();
+	}
 	else
 	// Adding an item from the world
 	{
@@ -68,32 +73,20 @@ void UInventoryComponent::Server_TryAddItem_Implementation(FName Id, TScriptInte
 		if (!InventoryItem->IsSafeToAdjustItem()) bSuccessfullyAddedItem = false;
 		else
 		{
+			const FGuid ItemId = HandleAddItem(Id, InventoryItem, Type);
 			InventoryItem->SetPlayerPending(Character);
-			bSuccessfullyAddedItem = HandleAddItem(Id, InventoryItem, Type) ? true : false;
+			bSuccessfullyAddedItem = ItemId.IsValid();
 		}
 	}
 	
 	// Remove the scope lock
 	if (InventoryItem->GetPlayerPending() == Character) InventoryItem->SetPlayerPending(nullptr);
-	Client_AddItemResponse(bSuccessfullyAddedItem, Id, InventoryItem, Type);
+	Client_AddItemResponse(bSuccessfullyAddedItem, Id, InventoryItem.GetObject(), Type);
 }
-void UInventoryComponent::Client_AddItemResponse_Implementation(const bool bSuccess, FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type)
-{
-	if (!bSuccess)
-	{
-		HandleItemAdditionFail(Id, InventoryItem, Type);
-		OnInventoryItemAdditionFailure.Broadcast(Id, InventoryItem);
-	}
-	else
-	{
-		const F_Item Item = HandleAddItem(Id, InventoryItem, Type); // TODO: are extra checks on clients necessary?
-		HandleItemAdditionSuccess(Item.Id, InventoryItem, Type);
-		OnInventoryItemAdditionSuccess.Broadcast(Item, InventoryItem);
-	}
-}
+
 FGuid UInventoryComponent::HandleAddItem_Implementation(const FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type)
 {
-	F_Item Item;
+	F_Item Item = *CreateInventoryObject();
 	if (InventoryItem) Item = InventoryItem->GetItem();
 	if (!Item.IsValid()) GetDataBaseItem(Id, Item);
 
@@ -105,6 +98,22 @@ FGuid UInventoryComponent::HandleAddItem_Implementation(const FName Id, TScriptI
 	}
 
 	return FGuid();
+}
+
+void UInventoryComponent::Client_AddItemResponse_Implementation(const bool bSuccess, const FName Id, UObject* InventoryInterface, const EItemType Type)
+{
+	const TScriptInterface<IInventoryItemInterface> InventoryItem = InventoryInterface;
+	if (!bSuccess)
+	{
+		HandleItemAdditionFail(Id, InventoryItem, Type);
+		OnInventoryItemAdditionFailure.Broadcast(Id, InventoryItem);
+	}
+	else
+	{
+		const F_Item Item = HandleAddItem(Id, InventoryItem, Type); // TODO: are extra checks on clients necessary?
+		HandleItemAdditionSuccess(Item.Id, InventoryItem, Type);
+		OnInventoryItemAdditionSuccess.Broadcast(Item, InventoryItem);
+	}
 }
 
 
@@ -155,14 +164,14 @@ bool UInventoryComponent::TryTransferItem_Implementation(const FGuid& Id, TScrip
 	if (Character->IsLocallyControlled())
 	{
 		TransferItemPendingClientLogic(Id, OtherInventory, Type);
-		Server_TryTransferItem(Id, OtherInventory, Type);
+		// Server_TryTransferItem(Id, OtherInventory.GetObject(), Type);
 		return true; // Just return true by default and let the client rpc response handle everything else
 	}
 	else if (Character->HasAuthority())
 	{
 		bool bFromThisInventory; 
 		const bool bSuccessfullyTransferredItem = HandleTransferItem(Id, OtherInventory, Type, bFromThisInventory);
-		Client_TransferItemResponse(bSuccessfullyTransferredItem, Id, OtherInventory, Type, bFromThisInventory);
+		// Client_TransferItemResponse(bSuccessfullyTransferredItem, Id, OtherInventory.GetObject(), Type, bFromThisInventory);
 		return true;
 	}
 
@@ -170,33 +179,39 @@ bool UInventoryComponent::TryTransferItem_Implementation(const FGuid& Id, TScrip
 }
 
 
-
-void UInventoryComponent::Server_TryTransferItem_Implementation(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type)
+/*
+void UInventoryComponent::Server_TryTransferItem_Implementation(const FGuid& Id, UObject* OtherInventory, const EItemType Type)
 {
 	bool bFromThisInventory;
-	const bool bSuccessfullyTransferredItem = HandleTransferItem(Id, OtherInventory, Type, bFromThisInventory);
+	TScriptInterface<IInventoryInterface> OtherInventoryInterface = OtherInventory;
+	const bool bSuccessfullyTransferredItem = HandleTransferItem(Id, OtherInventoryInterface, Type, bFromThisInventory);
 	Client_TransferItemResponse(bSuccessfullyTransferredItem, Id, OtherInventory, Type, bFromThisInventory);
 }
-void UInventoryComponent::Client_TransferItemResponse_Implementation(const bool bSuccess, const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type, const bool& bFromThisInventory)
+
+
+void UInventoryComponent::Client_TransferItemResponse_Implementation(const bool bSuccess, const FGuid& Id, UObject* OtherInventory, const EItemType Type, const bool& bFromThisInventory)
 {
+	const TScriptInterface<IInventoryInterface> OtherInventoryInterface = OtherInventory;
 	if (!bSuccess)
 	{
-		HandleTransferItemFail(Id, OtherInventory, bFromThisInventory);
-		OnInventoryItemTransferFailure.Broadcast(Id, OtherInventory, bFromThisInventory);
+		HandleTransferItemFail(Id, OtherInventoryInterface, bFromThisInventory);
+		OnInventoryItemTransferFailure.Broadcast(Id, OtherInventoryInterface, bFromThisInventory);
 	}
 	else
 	{
 		bool bWasFromThisInventory = bFromThisInventory;
-		HandleTransferItem(Id, OtherInventory, Type, bWasFromThisInventory); // TODO: are extra checks on clients necessary?
-		HandleTransferItemSuccess(Id, OtherInventory, bFromThisInventory);
-		OnInventoryItemTransferSuccess.Broadcast(Id, OtherInventory, bFromThisInventory);
+		HandleTransferItem(Id, OtherInventoryInterface, Type, bWasFromThisInventory); // TODO: are extra checks on clients necessary?
+		HandleTransferItemSuccess(Id, OtherInventoryInterface, bFromThisInventory);
+		OnInventoryItemTransferSuccess.Broadcast(Id, OtherInventoryInterface, bFromThisInventory);
 	}
 }
+*/
+
 bool UInventoryComponent::HandleTransferItem_Implementation(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type, bool& bFromThisInventory)
 {
 	// Find the item, and then transfer it to the other inventory
 	if (!Id.IsValid() || !OtherInventory) return false;
-	F_Item Item;
+	F_Item Item = *CreateInventoryObject();
 
 	// Search for the item in the player's inventory
 	GetItem(Item, Id);
@@ -226,7 +241,6 @@ bool UInventoryComponent::HandleTransferItem_Implementation(const FGuid& Id, TSc
 
 	return true;
 }
-
 
 void UInventoryComponent::TransferItemPendingClientLogic_Implementation(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type)
 {
@@ -264,7 +278,7 @@ bool UInventoryComponent::TryRemoveItem_Implementation(const FGuid& Id, const EI
 	{
 		TScriptInterface<IInventoryItemInterface> SpawnedItem;
 		const bool bSuccessfullyRemovedItem = HandleRemoveItem(Id, Type, bDropItem, SpawnedItem);
-		Client_RemoveItemResponse(bSuccessfullyRemovedItem, Id, Type, bDropItem, SpawnedItem);
+		Client_RemoveItemResponse(bSuccessfullyRemovedItem, Id, Type, bDropItem, SpawnedItem.GetObject());
 		return true;
 	}
 
@@ -276,27 +290,28 @@ void UInventoryComponent::Server_TryRemoveItem_Implementation(const FGuid& Id, c
 {
 	TScriptInterface<IInventoryItemInterface> SpawnedItem;
 	const bool bSuccessfullyRemovedItem = HandleRemoveItem(Id, Type, bDropItem, SpawnedItem);
-	Client_RemoveItemResponse(bSuccessfullyRemovedItem, Id, Type, bDropItem, SpawnedItem);
+	Client_RemoveItemResponse(bSuccessfullyRemovedItem, Id, Type, bDropItem, SpawnedItem.GetObject());
 	
 }
-void UInventoryComponent::Client_RemoveItemResponse_Implementation(const bool bSuccess, const FGuid& Id, const EItemType Type, bool bDropItem, TScriptInterface<IInventoryItemInterface> SpawnedItem)
+void UInventoryComponent::Client_RemoveItemResponse_Implementation(const bool bSuccess, const FGuid& Id, const EItemType Type, bool bDropItem, UObject* SpawnedItem)
 {
+	const TScriptInterface<IInventoryItemInterface> SpawnedItemInterface = SpawnedItem;
 	if (!bSuccess)
 	{
-		HandleRemoveItemFail(Id, Type, bDropItem, SpawnedItem);
-		OnInventoryItemRemovalFailure.Broadcast(Id, SpawnedItem);
+		HandleRemoveItemFail(Id, Type, bDropItem, SpawnedItemInterface);
+		OnInventoryItemRemovalFailure.Broadcast(Id, SpawnedItemInterface);
 	}
 	else
 	{
-		HandleRemoveItemSuccess(Id, Type, bDropItem, SpawnedItem);
-		OnInventoryItemRemovalSuccess.Broadcast(Id, SpawnedItem);
+		HandleRemoveItemSuccess(Id, Type, bDropItem, SpawnedItemInterface);
+		OnInventoryItemRemovalSuccess.Broadcast(Id, SpawnedItemInterface);
 	}
 }
 bool UInventoryComponent::HandleRemoveItem_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem, TScriptInterface<IInventoryItemInterface>& SpawnedItem)
 {
 	if (bDropItem)
 	{
-		F_Item Item;
+		F_Item Item = *CreateInventoryObject();
 		GetItem(Item, Id, Type);
 		
 		if (!Item.IsValid())
@@ -336,10 +351,31 @@ void UInventoryComponent::HandleRemoveItemSuccess_Implementation(const FGuid& Id
 #pragma region Utility
 F_Item UInventoryComponent::InternalGetInventoryItem_Implementation(const FGuid& Id, EItemType InventorySectionToSearch)
 {
-	F_Item Item;
+	F_Item Item = *CreateInventoryObject();
 
 	// Search for the item in the inventory, and return it
-	GetItem(Item, Id, InventorySectionToSearch);
+	if (EItemType::Inv_None != InventorySectionToSearch)
+	{
+		TMap<FGuid, F_Item>& InventoryList = GetInventoryList(InventorySectionToSearch);
+		if (InventoryList.Contains(Id))
+		{
+			Item = InventoryList[Id];
+			return Item;
+		}
+	}
+
+	// if nothing is specified then search through everything
+	for (int i = 0; i < static_cast<int>(EItemType::Inv_MAX); i++)
+	{
+		const EItemType ItemType = static_cast<EItemType>(i);
+		TMap<FGuid, F_Item>& InventoryList = GetInventoryList(ItemType);
+		if (InventoryList.Contains(Id))
+		{
+			Item = InventoryList[Id];
+			return Item;
+		}
+	}
+	
 	return Item;
 }
 
@@ -361,28 +397,10 @@ void UInventoryComponent::InternalAddInventoryItem_Implementation(const F_Item& 
 bool UInventoryComponent::GetItem_Implementation(F_Item& ReturnedItem, FGuid Id, EItemType InventorySectionToSearch)
 {
 	if (!Id.IsValid()) return false;
-	if (EItemType::Inv_None != InventorySectionToSearch)
-	{
-		TMap<FGuid, F_Item>& InventoryList = GetInventoryList(InventorySectionToSearch);
-		if (InventoryList.Contains(Id))
-		{
-			ReturnedItem = InventoryList[Id];
-			return true;
-		}
-	}
 
-	// if nothing is specified then search through everything
-	for (int i = 0; i < static_cast<int>(EItemType::Inv_MAX); i++)
-	{
-		const EItemType ItemType = static_cast<EItemType>(i);
-		TMap<FGuid, F_Item>& InventoryList = GetInventoryList(ItemType);
-		if (InventoryList.Contains(Id))
-		{
-			ReturnedItem = InventoryList[Id];
-			return true;
-		}
-	}
-
+	// search for the item in the inventory
+	ReturnedItem = InternalGetInventoryItem(Id, InventorySectionToSearch);
+	if (ReturnedItem.IsValid()) return true;
 	return false;
 }
 
@@ -408,15 +426,19 @@ TMap<FGuid, F_Item>& UInventoryComponent::GetInventoryList(EItemType InventorySe
 bool UInventoryComponent::GetDataBaseItem_Implementation(FName Id, F_Item& Item)
 {
 	if (!ItemDatabase || Id.IsNone()) return false;
-	
-	F_Table_ItemData* ItemData = ItemDatabase->FindRow<F_Table_ItemData>(Id, TEXT("Inventory Item Data Context"));
-	if (ItemData)
+	if (const F_Table_ItemData* ItemData = ItemDatabase->FindRow<F_Table_ItemData>(Id, TEXT("Inventory Item Data Context")))
 	{
 		Item.Id = FGuid::NewGuid();
 		Item = ItemData->ItemInformation;
 	}
 
 	return false;
+}
+
+
+F_Item* UInventoryComponent::CreateInventoryObject() const
+{
+	return new F_Item();
 }
 
 
@@ -446,9 +468,8 @@ TScriptInterface<IInventoryItemInterface> UInventoryComponent::SpawnWorldItem_Im
 		FVector SpawnLocation = SpawnTransform.GetLocation();
 		SpawnLocation.Z = SpawnLocation.Z + (Character->GetCapsuleComponent() ? Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() : 43.0f);
 		SpawnTransform.SetLocation(SpawnLocation);
-		
-		ABaseItem* SpawnedItem = GetWorld()->SpawnActor<ABaseItem>(Item.WorldClass, SpawnTransform, SpawnParameters);
-		if (SpawnedItem)
+
+		if (ABaseItem* SpawnedItem = GetWorld()->SpawnActor<ABaseItem>(Item.WorldClass, SpawnTransform, SpawnParameters))
 		{
 			const TScriptInterface<IInventoryItemInterface> WorldItem = SpawnedItem;
 			SpawnedItem->SetItem(Item);

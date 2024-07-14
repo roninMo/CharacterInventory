@@ -90,8 +90,8 @@ protected:
 	virtual void AddItemPendingClientLogic_Implementation(const FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type) override;
 	
 	/** Server/Client procedure calls are not valid on interfaces, these need to be handled in the actual implementation */
-	UFUNCTION(Server, Reliable) virtual void Server_TryAddItem(FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
-	UFUNCTION(Client, Reliable) virtual void Client_AddItemResponse(const bool bSuccess, FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
+	UFUNCTION(Server, Reliable) virtual void Server_TryAddItem(FName Id, UObject* InventoryInterface, const EItemType Type);
+	UFUNCTION(Client, Reliable) virtual void Client_AddItemResponse(const bool bSuccess, FName Id, UObject* InventoryInterface, const EItemType Type);
 	
 	/**
 	 * The actual logic that handles adding the item to an inventory component
@@ -156,8 +156,8 @@ protected:
 	virtual void TransferItemPendingClientLogic_Implementation(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type) override;
 	
 	/** Server/Client procedure calls are not valid on interfaces, these need to be handled in the actual implementation */
-	UFUNCTION(Server, Reliable) virtual void Server_TryTransferItem(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type);
-	UFUNCTION(Client, Reliable) virtual void Client_TransferItemResponse(const bool bSuccess, const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type, const bool& bFromThisInventory);
+	// UFUNCTION(Server, Reliable) virtual void Server_TryTransferItem(const FGuid& Id, UObject* OtherInventory, const EItemType Type);
+	// UFUNCTION(Client, Reliable) virtual void Client_TransferItemResponse(const bool bSuccess, const FGuid& Id, UObject* OtherInventory, const EItemType Type, const bool& bFromThisInventory);
 	
 	/**
 	 * The actual logic that handles transferring the item to the other inventory component
@@ -221,7 +221,7 @@ protected:
 	
 	/** Server/Client procedure calls are not valid on interfaces, these need to be handled in the actual implementation */
 	UFUNCTION(Server, Reliable) void Server_TryRemoveItem(const FGuid& Id, const EItemType Type, bool bDropItem);
-	UFUNCTION(Client, Reliable) void Client_RemoveItemResponse(const bool bSuccess, const FGuid& Id, const EItemType Type, bool bDropItem, TScriptInterface<IInventoryItemInterface> SpawnedItem);
+	UFUNCTION(Client, Reliable) void Client_RemoveItemResponse(const bool bSuccess, const FGuid& Id, const EItemType Type, bool bDropItem, UObject* SpawnedItem);
 	
 	/**
 	 * The actual logic that handles removing the item from the inventory component
@@ -291,6 +291,9 @@ protected:
 
 	/** Checks if the character is valid and if not, gets the character component and returns true */
 	UFUNCTION(BlueprintCallable) virtual bool GetCharacter();
+	
+	/** Creates the inventory item object for adding things to the inventory. If you want to subclass the inventory object, use this function */
+	virtual F_Item* CreateInventoryObject() const override;
 	
 	/**
 	 * Spawn an item into the world

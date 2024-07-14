@@ -95,6 +95,8 @@ struct F_Item
 	{}
 
 public:
+	virtual ~F_Item() {}
+	
 	/** The unique id for this item. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) FGuid Id;
 	
@@ -153,7 +155,7 @@ public:
  * Global item information for customizing different items with default information. This class is just a reference, either way you could use this for initializing things for items in general
  */
 UCLASS()
-class SANDBOX_API UItemGlobals : public UDataAsset
+class INVENTORYSYSTEM_API UItemGlobals : public UDataAsset
 {
 	GENERATED_BODY()
 	

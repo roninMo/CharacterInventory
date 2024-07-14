@@ -72,8 +72,6 @@ void ABaseItem::Tick(float DeltaSeconds)
 }
 
 
-
-
 #pragma region Inventory item functions
 F_Item ABaseItem::GetItem_Implementation() const				{ return Item; }
 const EItemType ABaseItem::GetItemType_Implementation() const	{ return Item.ItemType; }
@@ -101,21 +99,5 @@ bool ABaseItem::RetrieveItemFromDataTable(const FName Id, F_Item& ItemData)
 	}
 
 	return false;
-}
-#pragma endregion 
-
-
-
-
-#pragma region Utility
-ACharacter* ABaseItem::GetPlayerPending() const
-{
-	return PendingPlayer;
-}
-
-
-void ABaseItem::SetPlayerPending(ACharacter* Player)
-{
-	PendingPlayer = Player;
 }
 #pragma endregion 
