@@ -303,15 +303,15 @@ protected:
 
 
 	/** Printing inventory information -> @ref ListInventory, ListSavedCharacterInformation  */
-	UFUNCTION(BlueprintCallable) virtual void ListInventoryItem(const F_Item& Item);
-	UFUNCTION(BlueprintCallable) virtual void ListInventoryMap(const TMap<FGuid, F_Item>& Map, FString ListName);
-	UFUNCTION(BlueprintCallable) virtual void ListInventory();
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utility|Printing") virtual void ListInventoryItem(const F_Item& Item);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utility|Printing") virtual void ListInventoryMap(const TMap<FGuid, F_Item>& Map, FString ListName);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utility|Printing") virtual void ListInventory();
 
-	UFUNCTION(BlueprintCallable) virtual void ListSavedItem(const FS_Item& SavedItem);
-	UFUNCTION(BlueprintCallable) virtual void ListSavedItems(const TArray<FS_Item>& List, FString ListName);
-	UFUNCTION(BlueprintCallable) virtual void ListSavedWeaponInformation(const FS_WeaponInformation& SavedWeapon);
-	UFUNCTION(BlueprintCallable) virtual void ListSavedWeapons(const TArray<FS_WeaponInformation>& List);
-	UFUNCTION(BlueprintCallable) virtual void ListSavedCharacterInformation(const FS_CharacterInformation& Data, FString Message);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utility|Printing") virtual void ListSavedItem(const FS_Item& SavedItem);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utility|Printing") virtual void ListSavedItems(const TArray<FS_Item>& List, FString ListName);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utility|Printing") virtual void ListSavedWeaponInformation(const FS_WeaponInformation& SavedWeapon);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utility|Printing") virtual void ListSavedWeapons(const TArray<FS_WeaponInformation>& List);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utility|Printing") virtual void ListSavedCharacterInformation(const FS_CharacterInformation& Data, FString Message);
 
 		
 };
