@@ -1,0 +1,297 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "InventoryInformation.h"
+#include "UObject/Interface.h"
+#include "InventoryInterface.generated.h"
+
+enum class EItemType : uint8;
+class IInventoryItemInterface;
+class ABaseItem;
+// This class does not need to be modified.
+UINTERFACE(Blueprintable)
+class UInventoryInterface : public UInterface
+{
+	GENERATED_BODY()
+};
+
+
+
+
+
+
+
+/**
+ * An interface for creating inventory components. The base class already handles everything, this is just for customization purposes. This allows for both blueprint and code, with blueprint taking priority
+ * There's a lot of blueprint dynamic logic that allows you to have both blueprint and code in place, and I'd also recommend having delegates during the response calls for handling other component logic
+ */
+class INVENTORYSYSTEM_API IInventoryInterface
+{
+	GENERATED_BODY()
+	
+
+//----------------------------------------------------------------------------------//
+// Item Addition																	//
+//----------------------------------------------------------------------------------//
+public:
+	/**
+	 * Sends the information to the server to add an item to the inventory, and handles each of the different scenarios for this action. \n\n
+	 * There's multiple delegate functions in response to each scenario, and if an error occurs while updating the inventory there's safeguards in place to revert the logic \n\n
+	 *
+	 * Order of operations is TryAddItem:
+	 *		- AddItemPendingClientLogic
+	 *		- Server_TryAddItem -> HandleAddItem
+	 *			- Client_AddItemResponse
+	 *				- HandleItemAdditionFail
+	 *				- HandleItemAdditionSuccess
+	 * 
+	 * @param Id					The database id for this item. (If the item isn't already spawned in the world, retrieve the object from the database)
+	 * @param InventoryItem			The reference to the actor spawned in the world, if there is one (and you want it to be deleted upon completion).
+	 * @param Type					The item type (used for item allocation)
+	 * @returns		True if the item was found in the database and successfully added to the inventory.
+	 * 
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 * @note For handling the ui, I'd add delegates on the response functions for update notifications on the player's inventory
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations")
+	bool TryAddItem(const FName Id, UPARAM(ref) TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
+	virtual bool TryAddItem_Implementation(const FName Id, UPARAM(ref) TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
+
+	
+protected:
+	/**
+	 * What should happen assuming the item is added
+	 * @note If the item isn't successfully added then @ref HandleItemAdditionFail should be called, otherwise @ref HandleItemAdditionSuccess is called
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 * */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations")
+	void AddItemPendingClientLogic(const FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
+	virtual void AddItemPendingClientLogic_Implementation(const FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
+	
+	/** Server/Client procedure calls are not valid on interfaces, these need to be handled in the actual implementation */
+	// UFUNCTION(Server, Reliable) void Server_TryAddItem(FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
+	// UFUNCTION(Client, Reliable) void Client_AddItemResponse(const bool bSuccess, FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
+	
+	/**
+	 * The actual logic that handles adding the item to an inventory component
+	 * @return The id of the newly created item
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations")
+	FGuid HandleAddItem(const FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
+	virtual FGuid HandleAddItem_Implementation(const FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
+	
+	/**
+	 * If the item was not added to the inventory
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations")
+	void HandleItemAdditionFail(const FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
+	virtual void HandleItemAdditionFail_Implementation(const FName Id, TScriptInterface<IInventoryItemInterface> InventoryItem);
+
+	/**
+	 * If the item was successfully added to the inventory
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations")
+	void HandleItemAdditionSuccess(const FGuid& Id, TScriptInterface<IInventoryItemInterface> InventoryItem, const EItemType Type);
+	virtual void HandleItemAdditionSuccess_Implementation(const FGuid& Id, TScriptInterface<IInventoryItemInterface> InventoryItem);
+
+
+//----------------------------------------------------------------------------------//
+// Item Transfer																	//
+//----------------------------------------------------------------------------------//
+public:
+	/**
+	 * Sends the information to the server to transfer an item from the one inventory to another, and handles each of the different scenarios for this action. \n\n
+	 * There's multiple delegate functions in response to each scenario, and if an error occurs while updating the inventory there's safeguards in place to revert the logic \n\n
+	 *
+	 * Order of operations is TryTransferItem ->
+	 *		- TransferItemPendingClientLogic
+	 *		- Server_TryTransferItem -> HandleTransferItem
+	 *			- Client_TransferItemResponse
+	 *				- HandleTransferItemFail
+	 *				- HandleTransferItemSuccess
+	 *
+	 * @note For handling the ui, I'd add delegates on the response functions for update notifications on the player's inventory
+	 * 
+	 * @param Id					The unique id of the inventory item.
+	 * @param OtherInventory		The reference to the other inventory component
+	 * @param Type					The item type (used for item allocation)
+	 * @returns		True if the item was successfully transferred to the other inventory.
+	 * 
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 * @note For handling the ui, I'd add delegates on the response functions for update notifications on the player's inventory
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations")
+	bool TryTransferItem(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type);
+	virtual bool TryTransferItem_Implementation(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type);
+
+	
+protected:
+	/**
+	 * What should happen assuming the item is transferred
+	 * @note If the item isn't successfully transferred then @ref HandleTransferItemAdditionFail should be called, otherwise @ref HandleTransferItemAdditionSuccess is called
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 * */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations")
+	void TransferItemPendingClientLogic(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type);
+	virtual void TransferItemPendingClientLogic_Implementation(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type);
+	
+	/** Server/Client procedure calls are not valid on interfaces, these need to be handled in the actual implementation */
+	// UFUNCTION(Server, Reliable) void Server_TryTransferItem(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type);
+	// UFUNCTION(Client, Reliable) void Client_TransferItemResponse(const bool bSuccess, const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type);
+	
+	/**
+	 * The actual logic that handles transferring the item to the other inventory component
+	 * @return True if it was able to transfer the item
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations")
+	bool HandleTransferItem(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type, bool& bFromThisInventory);
+	virtual bool HandleTransferItem_Implementation(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, const EItemType Type, bool& bFromThisInventory);
+	
+	/**
+	 * If the item was not transferred to the other inventory 
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations")
+	void HandleTransferItemFail(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, bool bFromThisInventory);
+	virtual void HandleTransferItemFail_Implementation(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, bool bFromThisInventory);
+
+	/**
+	 * If the item was successfully transferred to the other inventory 
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations")
+	void HandleTransferItemSuccess(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, bool bFromThisInventory);
+	virtual void HandleTransferItemSuccess_Implementation(const FGuid& Id, TScriptInterface<IInventoryInterface> OtherInventory, bool bFromThisInventory);
+
+	
+//----------------------------------------------------------------------------------//
+// Remove Item																		//
+//----------------------------------------------------------------------------------//
+public:
+	/**
+	 * Sends the information to the server to remove an item from the inventory, and handles each of the different scenarios for this action (including whether to drop the item).
+	 * There's multiple delegate functions in response to each scenario, and if an error occurs while updating the inventory there's safeguards in place to revert the logic
+	 *
+	 * \n Order of operations is TryRemoveItem ->
+	 *		- RemoveItemPendingClientLogic
+	 *		- Server_TryRemoveItem -> HandleRemoveItem
+	 *			- Client_RemoveItemResponse
+	 *				- HandleRemoveItemFail
+	 *				- HandleRemoveItemSuccess
+	 * 
+	 * @param Id					The unique id of the inventory item.
+	 * @param Type					The item type (used for item allocation)
+	 * @param bDropItem				Whether the item should be spawned in the world when removed
+	 * @returns		True if the item was found in the database and successfully added to the inventory.
+	 * 
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 * @note For handling the ui, I'd add delegates on the response functions for update notifications on the player's inventory
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations")
+	bool TryRemoveItem(const FGuid& Id, const EItemType Type, bool bDropItem);
+	virtual bool TryRemoveItem_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem);
+	
+	
+protected:
+	/**
+	 * What should happen assuming the item is removed
+	 * @note If the item isn't successfully removed then @ref HandleRemoveItemAdditionFail should be called, otherwise @ref HandleRemoveItemAdditionSuccess is called
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 * */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations")
+	void RemoveItemPendingClientLogic(const FGuid& Id, const EItemType Type, bool bDropItem);
+	virtual void RemoveItemPendingClientLogic_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem);
+	
+	/** Server/Client procedure calls are not valid on interfaces, these need to be handled in the actual implementation */
+	// UFUNCTION(Server, Reliable) void Server_TryRemoveItem(const FGuid& Id, const EItemType Type, bool bDropItem);
+	// UFUNCTION(Client, Reliable) void Client_RemoveItemResponse(const bool bSuccess, const FGuid& Id, const EItemType Type, bool bDropItem, TScriptInterface<IInventoryItemInterface> InventoryItemInterface);
+	
+	/**
+	 * The actual logic that handles removing the item from the inventory component
+	 * @return True if it was able to remove the item
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations")
+	bool HandleRemoveItem(const FGuid& Id, const EItemType Type, bool bDropItem, UPARAM(ref) TScriptInterface<IInventoryItemInterface>& SpawnedItem);
+	virtual bool HandleRemoveItem_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem, TScriptInterface<IInventoryItemInterface>& SpawnedItem);
+	
+	/**
+	 * If the item was not removed from the inventory 
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations")
+	void HandleRemoveItemFail(const FGuid& Id, const EItemType Type, bool bDropItem, TScriptInterface<IInventoryItemInterface> SpawnedItem);
+	virtual void HandleRemoveItemFail_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem, TScriptInterface<IInventoryItemInterface> SpawnedItem);
+
+	/**
+	 * If the item was successfully removed from the inventory
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations")
+	void HandleRemoveItemSuccess(const FGuid& Id, const EItemType Type, bool bDropItem, TScriptInterface<IInventoryItemInterface> SpawnedItem);
+	virtual void HandleRemoveItemSuccess_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem, TScriptInterface<IInventoryItemInterface> SpawnedItem);
+	
+	
+//----------------------------------------------------------------------------------//
+// Utility																			//
+//----------------------------------------------------------------------------------//
+public:
+	/**
+	 * Returns a copy of an item from the player's inventory. This function shouldn't be called directly, and should only be called on the server.
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place (Server side logic between two inventory component interfaces)
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	F_Item InternalGetInventoryItem(const FGuid& Id, EItemType InventorySectionToSearch = EItemType::Inv_None);
+	virtual F_Item InternalGetInventoryItem_Implementation(const FGuid& Id, EItemType InventorySectionToSearch = EItemType::Inv_None);
+	
+	/**
+	 * Adds an item from the player's inventory. This function shouldn't be called directly, and should only be called on the server.
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place (Server side logic between two inventory component interfaces)
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void InternalAddInventoryItem(const F_Item& Item);
+	virtual void InternalAddInventoryItem_Implementation(const F_Item& Item);
+		
+	/**
+	 * Removes an item from the player's inventory. This function shouldn't be called directly, and should only be called on the server.
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 * @note these are only used for specific cases where there isn't a traditional way of editing the inventory (Server side logic between two inventory component interfaces)
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void InternalRemoveInventoryItem(const FGuid& Id, EItemType InventorySectionToSearch = EItemType::Inv_None);
+	virtual void InternalRemoveInventoryItem_Implementation(const FGuid& Id, EItemType InventorySectionToSearch = EItemType::Inv_None);
+	
+	
+protected:
+	/**
+	 * Returns an item from one of the lists in this component.
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Utility")
+	bool GetItem(F_Item& ReturnedItem, FGuid Id, EItemType InventorySectionToSearch = EItemType::Inv_None);
+	virtual bool GetItem_Implementation(F_Item& ReturnedItem, FGuid Id, EItemType InventorySectionToSearch = EItemType::Inv_None);
+
+	/**
+	 *	Returns an item from the database
+	 *  @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Utility")
+	bool GetDataBaseItem(FName Id, F_Item& Item);
+	virtual bool GetDataBaseItem_Implementation(FName Id, F_Item& Item);
+	
+	/**
+	 * Spawn an item into the world
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Utility")
+	TScriptInterface<IInventoryItemInterface> SpawnWorldItem(const F_Item& Item);
+	virtual TScriptInterface<IInventoryItemInterface> SpawnWorldItem_Implementation(const F_Item& Item);
+
+	
+};
