@@ -45,3 +45,7 @@ ACharacter* IInventoryItemInterface::GetPlayerPending_Implementation()
 {
 	return nullptr;
 }
+
+void IInventoryItemInterface::SetItemInformationDatabase_Implementation(UDataTable* Database)
+{
+}

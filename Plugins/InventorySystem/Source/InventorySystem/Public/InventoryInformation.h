@@ -98,7 +98,7 @@ public:
 	virtual ~F_Item() {}
 	
 	/** The unique id for this item. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) FGuid Id;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite) FGuid Id;
 	
 	/** The sort order for the inventory item. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int SortOrder;

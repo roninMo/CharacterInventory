@@ -48,11 +48,15 @@ void ABaseItem::BeginPlay()
 	Super::BeginPlay();
 	InitializeItemGlobals();
 
-	if (ItemInformationTable)
+	if (ItemInformationTable && !Item.IsValid())
 	{
 		RetrieveItemFromDataTable(TableId, Item);
 	}
-	else UE_LOG(LogTemp, Error, TEXT("%s() %s: item information data table, set this up in the blueprint!"), *FString(__FUNCTION__), *GetName());
+	if (ItemInformationTable && !Item.IsValid())
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s() %s: item information data table, set this up in the blueprint!"), *FString(__FUNCTION__), *GetName());
+	}
+	
 	CreateIdIfNull();
 }
 
@@ -82,6 +86,7 @@ void ABaseItem::SetId_Implementation(const FGuid& Id)			{ Item.Id = Id; }
 bool ABaseItem::IsSafeToAdjustItem_Implementation() const { return PendingPlayer == nullptr; }
 void ABaseItem::SetPlayerPending_Implementation(ACharacter* Player) { PendingPlayer = Player; }
 ACharacter* ABaseItem::GetPlayerPending_Implementation() { return PendingPlayer; }
+void ABaseItem::SetItemInformationDatabase_Implementation(UDataTable* Database) { ItemInformationTable = Database; }
 
 
 bool ABaseItem::RetrieveItemFromDataTable(const FName Id, F_Item& ItemData)
@@ -100,4 +105,5 @@ bool ABaseItem::RetrieveItemFromDataTable(const FName Id, F_Item& ItemData)
 
 	return false;
 }
+
 #pragma endregion 

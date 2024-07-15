@@ -427,7 +427,7 @@ bool UInventoryComponent::HandleRemoveItem_Implementation(const FGuid& Id, const
 			return false;
 		}
 
-		const TScriptInterface<IInventoryItemInterface> InventoryItem = Execute_SpawnWorldItem(this, Item, Character->GetActorTransform());
+		const TScriptInterface<IInventoryItemInterface> InventoryItem = Execute_SpawnWorldItem(this, Item, GetOwner()->GetActorTransform());
 		SpawnedItem = InventoryItem ? InventoryItem.GetObject() : nullptr;
 	}
 
@@ -598,14 +598,15 @@ TScriptInterface<IInventoryItemInterface> UInventoryComponent::SpawnWorldItem_Im
 		SpawnParameters.Owner = GetOwner();
 		FTransform SpawnTransform = Location;
 		FVector SpawnLocation = SpawnTransform.GetLocation();
-		SpawnLocation.Z = SpawnLocation.Z + (Character->GetCapsuleComponent() ? Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() : 43.0f);
+		SpawnLocation.Z = SpawnLocation.Z + 34.0f;
 		SpawnTransform.SetLocation(SpawnLocation);
 
 		if (ABaseItem* SpawnedItem = GetWorld()->SpawnActor<ABaseItem>(Item.WorldClass, SpawnTransform, SpawnParameters))
 		{
 			const TScriptInterface<IInventoryItemInterface> WorldItem = SpawnedItem;
-			SpawnedItem->SetItem(Item);
-			SpawnedItem->SetId(Item.Id); // Persist the unique id of this inventory object
+			SpawnedItem->Execute_SetItemInformationDatabase(SpawnedItem, ItemDatabase);
+			SpawnedItem->Execute_SetItem(SpawnedItem, Item);
+			SpawnedItem->Execute_SetId(SpawnedItem, Item.Id); // Persist the unique id of this inventory object
 			return WorldItem;
 		}
 		else

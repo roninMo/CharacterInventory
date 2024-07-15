@@ -80,6 +80,9 @@ public:
 //----------------------------------------------------------------------------------------------------------//
 // Utility																									//
 //----------------------------------------------------------------------------------------------------------//
+	/** Adds the item information database */
+	virtual void SetItemInformationDatabase_Implementation(UDataTable* Database);
+	
 	/** Retrieves an item from the data table. Returns null if the item was not found */
 	UFUNCTION(BlueprintCallable) virtual bool RetrieveItemFromDataTable(FName Id, F_Item& ItemData);
 	

@@ -22,6 +22,9 @@ class INVENTORYSYSTEM_API IInventoryItemInterface
 	GENERATED_BODY()
 	
 public:
+//----------------------------------------------------------------------------------------------------------//
+// Inventory item functions																					//
+//----------------------------------------------------------------------------------------------------------//
 	/** Returns the item's information */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Item") 
 	F_Item GetItem() const;
@@ -55,7 +58,11 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Item") 
 	void SetId(const FGuid& Id);
 	virtual void SetId_Implementation(const FGuid& Id);
-
+	
+	
+//----------------------------------------------------------------------------------------------------------//
+// Networking functions																						//
+//----------------------------------------------------------------------------------------------------------//
 	/**
 	 * Server side function that acts like a threadlock to prevent multiple from trying to perform operations on an item at the same time
 	 * @remarks Do not override this unless you're refactoring
@@ -81,6 +88,15 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Item|Networking")
 	ACharacter* GetPlayerPending();
 	virtual ACharacter* GetPlayerPending_Implementation();
-
+	
+	
+//----------------------------------------------------------------------------------------------------------//
+// Utility																									//
+//----------------------------------------------------------------------------------------------------------//
+	/** Adds the item information database */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Item") 
+	void SetItemInformationDatabase(UDataTable* Database);
+	virtual void SetItemInformationDatabase_Implementation(UDataTable* Database);
+	
 	
 };
