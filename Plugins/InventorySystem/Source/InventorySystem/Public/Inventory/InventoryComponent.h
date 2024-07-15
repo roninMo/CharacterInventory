@@ -73,8 +73,7 @@ public:
 	 *				- HandleItemAdditionFail
 	 *				- HandleItemAdditionSuccess
 	* 
-	 * @param Id										The id for this item in the inventory
-	 * @param DatabaseId								The database id for this item. (If the item isn't already spawned in the world, retrieve the object from the database)
+	 * @param DatabaseId								The id for this item in the inventory
 	 * @param InventoryItemInterface					The reference to the actor spawned in the world, if there is one (and you want it to be deleted upon completion).
 	 * @param Type										The item type (used for item allocation)
 	 * @returns		True if the item was found in the database and successfully added to the inventory.
@@ -82,7 +81,7 @@ public:
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 * @note For handling the ui, I'd add delegates on the response functions for update notifications on the player's inventory
 	 */
-	virtual bool TryAddItem_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type) override;
+	virtual bool TryAddItem_Implementation(const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type) override;
 
 	
 protected:
@@ -91,7 +90,7 @@ protected:
 	 * @note If the item isn't successfully added then @ref HandleItemAdditionFail should be called, otherwise @ref HandleItemAdditionSuccess is called
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 * */
-	virtual void AddItemPendingClientLogic_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type) override;
+	virtual void AddItemPendingClientLogic_Implementation(const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type) override;
 	
 	/** Server/Client procedure calls are not valid on interfaces, these need to be handled in the actual implementation */
 	UFUNCTION(Server, Reliable) virtual void Server_TryAddItem(const FGuid& Id, const FName DatabaseId, UObject* InventoryInterface, const EItemType Type);
@@ -285,7 +284,7 @@ protected:
 	virtual bool GetItem_Implementation(F_Item& ReturnedItem, FGuid Id, EItemType InventorySectionToSearch = EItemType::Inv_None) override;
 
 	/** Returns the inventory list specific to the item's type */
-	virtual TMap<FGuid, F_Item>& GetInventoryList(EItemType InventorySectionToSearch);
+	UFUNCTION(BlueprintCallable) virtual TMap<FGuid, F_Item>& GetInventoryList(EItemType InventorySectionToSearch);
 	
 	/**
 	 *	Returns an item from the database

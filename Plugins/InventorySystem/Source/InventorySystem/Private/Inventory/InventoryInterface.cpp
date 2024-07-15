@@ -4,12 +4,12 @@
 #include "Inventory/InventoryInterface.h"
 
 // Add default functionality here for any IInventoryInterface functions that are not pure virtual.
-bool IInventoryInterface::TryAddItem_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type)
+bool IInventoryInterface::TryAddItem_Implementation(const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type)
 {
 	return false;
 }
 
-void IInventoryInterface::AddItemPendingClientLogic_Implementation(const FGuid& Id, FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type)
+void IInventoryInterface::AddItemPendingClientLogic_Implementation(FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type)
 {
 }
 

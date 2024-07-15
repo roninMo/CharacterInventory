@@ -45,8 +45,7 @@ public:
 	 *				- HandleItemAdditionFail
 	 *				- HandleItemAdditionSuccess
 	 * 
-	 * @param Id										The id for this item in the inventory
-	 * @param DatabaseId								The database id for this item. (If the item isn't already spawned in the world, retrieve the object from the database)
+	 * @param DatabaseId								The id for this item in the inventory
 	 * @param InventoryItemInterface					The reference to the actor spawned in the world, if there is one (and you want it to be deleted upon completion).
 	 * @param Type										The item type (used for item allocation)
 	 * @returns		True if the item was found in the database and successfully added to the inventory.
@@ -55,8 +54,8 @@ public:
 	 * @note For handling the ui, I'd add delegates on the response functions for update notifications on the player's inventory
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory", meta = (DisplayName = "Try Add Item"))
-	bool TryAddItem(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);
-	virtual bool TryAddItem_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);
+	bool TryAddItem(const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);
+	virtual bool TryAddItem_Implementation(const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);
 
 	
 protected:
@@ -66,8 +65,8 @@ protected:
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 * */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Pending Add Item (Client Logic)"))
-	void AddItemPendingClientLogic(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);
-	virtual void AddItemPendingClientLogic_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);
+	void AddItemPendingClientLogic(const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);
+	virtual void AddItemPendingClientLogic_Implementation(const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);
 	
 	/** Server/Client procedure calls are not valid on interfaces, these need to be handled in the actual implementation */
 	// UFUNCTION(Server, Reliable) void Server_TryAddItem(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);

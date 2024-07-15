@@ -33,15 +33,23 @@ void UInventoryComponent::BeginPlay()
 
 #pragma region Inventory retrieval logic
 #pragma region Add Item
-bool UInventoryComponent::TryAddItem_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type)
+bool UInventoryComponent::TryAddItem_Implementation(const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type)
 {
-	if (!GetCharacter() || DatabaseId.IsNone() || !Id.IsValid()) return false;
+	if (!GetCharacter() || DatabaseId.IsNone()) return false;
+
+	// TODO: check if this is valid in production. If not, add logic to refactor distributing this from the server - Unable to resolve default guid from client: ObjectName: BaseItem_0, ObjOuter: /Game/UEDPIE_0_Level.Level:PersistentLevel 
+	FGuid Id = FGuid::NewGuid();
+	const TScriptInterface<IInventoryItemInterface> InventoryItem = InventoryItemInterface;
+	if (InventoryItem.GetInterface() && InventoryItem->Execute_GetId(InventoryItem.GetObject()).IsValid())
+	{
+		Id = InventoryItem->Execute_GetId(InventoryItem.GetObject());
+	}
 
 	// If the server calls the function, just handle it and send the updated information to the client. Otherwise handle sending the information to the server and then back to the client
 	if (Character->IsLocallyControlled())
 	{
 		Server_TryAddItem(Id, DatabaseId, InventoryItemInterface, Type);
-		Execute_AddItemPendingClientLogic(this, Id, DatabaseId, InventoryItemInterface, Type);
+		Execute_AddItemPendingClientLogic(this, DatabaseId, InventoryItemInterface, Type);
 		return true; // Just return true by default and let the client rpc response handle everything else
 	}
 	else if (Character->HasAuthority())
@@ -159,7 +167,7 @@ void UInventoryComponent::Client_AddItemResponse_Implementation(const bool bSucc
 }
 
 
-void UInventoryComponent::AddItemPendingClientLogic_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type)
+void UInventoryComponent::AddItemPendingClientLogic_Implementation(const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type)
 {
 	// Hide the item in the world but do not delete it until the process is complete and update the ui
 	AActor* WorldItem = Cast<AActor>(InventoryItemInterface);
@@ -488,27 +496,26 @@ F_Item UInventoryComponent::InternalGetInventoryItem_Implementation(const FGuid&
 }
 
 
-void UInventoryComponent::InternalRemoveInventoryItem_Implementation(const FGuid& Id, EItemType InventorySectionToSearch)
+void UInventoryComponent::InternalRemoveInventoryItem_Implementation(const FGuid& Id, const EItemType InventorySectionToSearch)
 {
 	TMap<FGuid, F_Item>& InventoryList = GetInventoryList(InventorySectionToSearch);
 	if (InventoryList.Contains(Id))
 	{
 		InventoryList.Remove(Id);
 	}
-	// Just to be safe, search through the inventory
-	else
-	{
-		for (int i = 0; i < static_cast<int>(EItemType::Inv_MAX); i++)
-		{
-			const EItemType ItemType = static_cast<EItemType>(i);
-			InventoryList = GetInventoryList(ItemType);
-			if (InventoryList.Contains(Id))
-			{
-				InventoryList.Remove(Id);
-				return;
-			}
-		}
-	}
+	// else
+	// {
+	// 	for (int i = 0; i < static_cast<int>(EItemType::Inv_MAX); i++)
+	// 	{
+	// 		const EItemType ItemType = static_cast<EItemType>(i);
+	// 		InventoryList = GetInventoryList(ItemType);
+	// 		if (InventoryList.Contains(Id))
+	// 		{
+	// 			InventoryList.Remove(Id);
+	// 			return;
+	// 		}
+	// 	}
+	// }
 }
 
 
@@ -661,13 +668,10 @@ void UInventoryComponent::ListInventoryMap(const TMap<FGuid, F_Item>& Map, FStri
 void UInventoryComponent::ListInventory()
 {
 	if (!GetCharacter()) return;
-	
-	UE_LOGFMT(InventoryLog, Log, " ");
-	UE_LOGFMT(InventoryLog, Log, "// {0}: Starting to print {1}'s inventory. {2}()", *UEnum::GetValueAsString(Character->GetLocalRole()), *GetNameSafe(Character), *FString(__FUNCTION__));
 	UE_LOGFMT(InventoryLog, Log, " ");
 	UE_LOGFMT(InventoryLog, Log, " ");
 	UE_LOGFMT(InventoryLog, Log, "//---------------------------------------------------------------------------------------------/");
-	UE_LOGFMT(InventoryLog, Log, "// {0}'s Inventory", *GetNameSafe(Character));
+	UE_LOGFMT(InventoryLog, Log, "// ({0}) {1}'s Inventory", *UEnum::GetValueAsString(Character->GetLocalRole()), *GetNameSafe(Character));
 	UE_LOGFMT(InventoryLog, Log, "//--------------------------------------------------------------------------------------------/");
 	UE_LOGFMT(InventoryLog, Log, " ");
 
@@ -712,6 +716,7 @@ void UInventoryComponent::ListSavedItem(const FS_Item& SavedItem)
 	UE_LOGFMT(InventoryLog, Log, "({0}) DatabaseId: {1}, Id: {2}", SavedItem.SortOrder, SavedItem.ItemName, SavedItem.Id.ToString());
 }
 
+
 void UInventoryComponent::ListSavedItems(const TArray<FS_Item>& List, FString ListName)
 {
 	if (!GetCharacter()) return;
@@ -726,6 +731,7 @@ void UInventoryComponent::ListSavedItems(const TArray<FS_Item>& List, FString Li
 		ListSavedItem(SavedItem);
 	}
 }
+
 
 void UInventoryComponent::ListSavedWeaponInformation(const FS_WeaponInformation& SavedWeapon)
 {
@@ -743,6 +749,7 @@ void UInventoryComponent::ListSavedWeaponInformation(const FS_WeaponInformation&
 	
 	UE_LOGFMT(InventoryLog, Log, "{1} Id: {1}, Level: {2}", *Weapons[SavedWeapon.Id].DisplayName, SavedWeapon.Id.ToString(), SavedWeapon.Level);
 }
+
 
 void UInventoryComponent::ListSavedWeapons(const TArray<FS_WeaponInformation>& List)
 {
@@ -764,7 +771,7 @@ void UInventoryComponent::ListSavedCharacterInformation(const FS_CharacterInform
 	UE_LOGFMT(InventoryLog, Log, " ");
 	UE_LOGFMT(InventoryLog, Log, " ");
 	UE_LOGFMT(InventoryLog, Log, "//---------------------------------------------------------------------------------------------/");
-	UE_LOGFMT(InventoryLog, Log, "// {0} {1} Save/Load data ->  {2}", *UEnum::GetValueAsString(Character->GetLocalRole()), *GetNameSafe(Character), *Message);
+	UE_LOGFMT(InventoryLog, Log, "// ({0}) {1} Save/Load data ->  {2}", *UEnum::GetValueAsString(Character->GetLocalRole()), *GetNameSafe(Character), *Message);
 	UE_LOGFMT(InventoryLog, Log, "//--------------------------------------------------------------------------------------------/");
 	UE_LOGFMT(InventoryLog, Log, "NetId: {0}", Data.NetId);
 	UE_LOGFMT(InventoryLog, Log, "PlatformId: {0}", Data.PlatformId);
@@ -805,5 +812,3 @@ void UInventoryComponent::ListSavedCharacterInformation(const FS_CharacterInform
 	UE_LOGFMT(InventoryLog, Log, " ");
 }
 #pragma endregion 
-
-
