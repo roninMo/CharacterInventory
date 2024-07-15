@@ -4,25 +4,25 @@
 #include "Inventory/InventoryInterface.h"
 
 // Add default functionality here for any IInventoryInterface functions that are not pure virtual.
-bool IInventoryInterface::TryAddItem_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type)
+bool IInventoryInterface::TryAddItem_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type)
 {
 	return false;
 }
 
-void IInventoryInterface::AddItemPendingClientLogic_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type)
+void IInventoryInterface::AddItemPendingClientLogic_Implementation(const FGuid& Id, FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type)
 {
 }
 
-FGuid IInventoryInterface::HandleAddItem_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type)
+F_Item IInventoryInterface::HandleAddItem_Implementation(const FGuid& Id, FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type)
 {
-	return FGuid();
+	return F_Item();
 }
 
-void IInventoryInterface::HandleItemAdditionFail_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type)
+void IInventoryInterface::HandleItemAdditionFail_Implementation(const FGuid& Id, FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type)
 {
 }
 
-void IInventoryInterface::HandleItemAdditionSuccess_Implementation(const FGuid& Id, UObject* InventoryItemInterface, const EItemType Type)
+void IInventoryInterface::HandleItemAdditionSuccess_Implementation(const FGuid& Id, FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type)
 {
 }
 
@@ -99,7 +99,7 @@ F_Item* IInventoryInterface::CreateInventoryObject() const
 	return new F_Item();
 }
 
-TScriptInterface<IInventoryItemInterface> IInventoryInterface::SpawnWorldItem_Implementation(const F_Item& Item)
+TScriptInterface<IInventoryItemInterface> IInventoryInterface::SpawnWorldItem_Implementation(const F_Item& Item, const FTransform& Location)
 {
 	return nullptr;
 }

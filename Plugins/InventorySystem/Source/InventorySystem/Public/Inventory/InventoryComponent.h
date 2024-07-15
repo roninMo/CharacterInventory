@@ -16,7 +16,7 @@ DECLARE_LOG_CATEGORY_EXTERN(InventoryLog, Log, All);
 #define OP__InventoryToInventory EInventoryOperation::OP_InventoryToInventory
 
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInventoryAddtionFailureDelegate, const FName&, Id, TScriptInterface<IInventoryItemInterface>, SpawnedItem);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FInventoryAddtionFailureDelegate, const FGuid&, Id, const FName, DatabaseId, TScriptInterface<IInventoryItemInterface>, SpawnedItem);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInventoryAddtionSuccessDelegate, const F_Item&, ItemData, TScriptInterface<IInventoryItemInterface>, SpawnedItem);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FInventoryItemTransferFailureDelegate, const FGuid&, Id, const TScriptInterface<IInventoryInterface>, OtherInventory, const bool, bFromThisInventory);
@@ -47,7 +47,8 @@ protected:
 	UPROPERTY(BlueprintReadWrite) TObjectPtr<ACharacter> Character;
 
 	/** Other */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) bool bDebugInventory;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debugging") bool bDebugInventory_Client;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debugging") bool bDebugInventory_Server;
 
 	
 protected:
@@ -63,14 +64,17 @@ public:
 	 * Sends the information to the server to add an item to the inventory, and handles each of the different scenarios for this action. \n\n
 	 * There's multiple delegate functions in response to each scenario, and if an error occurs while updating the inventory there's safeguards in place to revert the logic \n\n
 	 *
+	 * Either add an item by creating a unique id and using the database id, or add an item from an already spawned item in the world
+	 *
 	 * Order of operations is TryAddItem:
 	 *		- AddItemPendingClientLogic
 	 *		- Server_TryAddItem -> HandleAddItem
 	 *			- Client_AddItemResponse
 	 *				- HandleItemAdditionFail
 	 *				- HandleItemAdditionSuccess
-	 * 
-	 * @param Id										The database id for this item. (If the item isn't already spawned in the world, retrieve the object from the database)
+	* 
+	 * @param Id										The id for this item in the inventory
+	 * @param DatabaseId								The database id for this item. (If the item isn't already spawned in the world, retrieve the object from the database)
 	 * @param InventoryItemInterface					The reference to the actor spawned in the world, if there is one (and you want it to be deleted upon completion).
 	 * @param Type										The item type (used for item allocation)
 	 * @returns		True if the item was found in the database and successfully added to the inventory.
@@ -78,7 +82,7 @@ public:
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 * @note For handling the ui, I'd add delegates on the response functions for update notifications on the player's inventory
 	 */
-	virtual bool TryAddItem_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type) override;
+	virtual bool TryAddItem_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type) override;
 
 	
 protected:
@@ -87,24 +91,24 @@ protected:
 	 * @note If the item isn't successfully added then @ref HandleItemAdditionFail should be called, otherwise @ref HandleItemAdditionSuccess is called
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 * */
-	virtual void AddItemPendingClientLogic_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type) override;
+	virtual void AddItemPendingClientLogic_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type) override;
 	
 	/** Server/Client procedure calls are not valid on interfaces, these need to be handled in the actual implementation */
-	UFUNCTION(Server, Reliable) virtual void Server_TryAddItem(FName Id, UObject* InventoryInterface, const EItemType Type);
-	UFUNCTION(Client, Reliable) virtual void Client_AddItemResponse(const bool bSuccess, FName Id, UObject* InventoryInterface, const EItemType Type);
+	UFUNCTION(Server, Reliable) virtual void Server_TryAddItem(const FGuid& Id, const FName DatabaseId, UObject* InventoryInterface, const EItemType Type);
+	UFUNCTION(Client, Reliable) virtual void Client_AddItemResponse(const bool bSuccess, const FGuid& Id, const FName DatabaseId, UObject* InventoryInterface, const EItemType Type);
 	
 	/**
 	 * The actual logic that handles adding the item to an inventory component
 	 * @return The id of the newly created item
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
-	virtual FGuid HandleAddItem_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type) override;
+	virtual F_Item HandleAddItem_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type) override;
 	
 	/**
 	 * If the item was not added to the inventory
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
-	virtual void HandleItemAdditionFail_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type) override;
+	virtual void HandleItemAdditionFail_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type) override;
 
 	/** Delegate function for when an item failed to be added to the inventory. Helpful for ui elements to keep track of inventory updates */
 	UPROPERTY(BlueprintAssignable, Category = "Inventory|Operations") FInventoryAddtionFailureDelegate OnInventoryItemAdditionFailure;
@@ -113,7 +117,7 @@ protected:
 	 * If the item was successfully added to the inventory
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
-	virtual void HandleItemAdditionSuccess_Implementation(const FGuid& Id, UObject* InventoryItemInterface, const EItemType Type) override;
+	virtual void HandleItemAdditionSuccess_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type) override;
 
 	/** Delegate function for when an item is successfully added to the inventory. Helpful for ui elements to keep track of inventory updates */
 	UPROPERTY(BlueprintAssignable, Category = "Inventory|Operations") FInventoryAddtionSuccessDelegate OnInventoryItemAdditionSuccess;
@@ -299,7 +303,7 @@ protected:
 	 * Spawn an item into the world
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 * */
-	virtual TScriptInterface<IInventoryItemInterface> SpawnWorldItem_Implementation(const F_Item& Item) override;
+	virtual TScriptInterface<IInventoryItemInterface> SpawnWorldItem_Implementation(const F_Item& Item, const FTransform& Location) override;
 
 
 	/** Printing inventory information -> @ref ListInventory, ListSavedCharacterInformation  */

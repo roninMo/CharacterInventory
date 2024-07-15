@@ -12,7 +12,7 @@ class ABaseItem;
 
 
 // This class does not need to be modified.
-UINTERFACE(Blueprintable)
+UINTERFACE(Blueprintable, BlueprintType)
 class UInventoryInterface : public UInterface
 {
 	GENERATED_BODY()
@@ -45,7 +45,8 @@ public:
 	 *				- HandleItemAdditionFail
 	 *				- HandleItemAdditionSuccess
 	 * 
-	 * @param Id										The database id for this item. (If the item isn't already spawned in the world, retrieve the object from the database)
+	 * @param Id										The id for this item in the inventory
+	 * @param DatabaseId								The database id for this item. (If the item isn't already spawned in the world, retrieve the object from the database)
 	 * @param InventoryItemInterface					The reference to the actor spawned in the world, if there is one (and you want it to be deleted upon completion).
 	 * @param Type										The item type (used for item allocation)
 	 * @returns		True if the item was found in the database and successfully added to the inventory.
@@ -54,8 +55,8 @@ public:
 	 * @note For handling the ui, I'd add delegates on the response functions for update notifications on the player's inventory
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory", meta = (DisplayName = "Try Add Item"))
-	bool TryAddItem(const FName Id, UObject* InventoryItemInterface, const EItemType Type);
-	virtual bool TryAddItem_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type);
+	bool TryAddItem(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);
+	virtual bool TryAddItem_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);
 
 	
 protected:
@@ -65,12 +66,12 @@ protected:
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 * */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Pending Add Item (Client Logic)"))
-	void AddItemPendingClientLogic(const FName Id, UObject* InventoryItemInterface, const EItemType Type);
-	virtual void AddItemPendingClientLogic_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type);
+	void AddItemPendingClientLogic(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);
+	virtual void AddItemPendingClientLogic_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);
 	
 	/** Server/Client procedure calls are not valid on interfaces, these need to be handled in the actual implementation */
-	// UFUNCTION(Server, Reliable) void Server_TryAddItem(FName Id, UObject* InventoryItemInterface, const EItemType Type);
-	// UFUNCTION(Client, Reliable) void Client_AddItemResponse(const bool bSuccess, FName Id, UObject* InventoryItemInterface, const EItemType Type);
+	// UFUNCTION(Server, Reliable) void Server_TryAddItem(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);
+	// UFUNCTION(Client, Reliable) void Client_AddItemResponse(const bool bSuccess, const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);
 	
 	/**
 	 * The actual logic that handles adding the item to an inventory component
@@ -78,24 +79,24 @@ protected:
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Handle Add Item"))
-	FGuid HandleAddItem(const FName Id, UObject* InventoryItemInterface, const EItemType Type);
-	virtual FGuid HandleAddItem_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type);
+	F_Item HandleAddItem(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);
+	virtual F_Item HandleAddItem_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);
 	
 	/**
 	 * If the item was not added to the inventory
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Handle Add Item (Failed)"))
-	void HandleItemAdditionFail(const FName Id, UObject* InventoryItemInterface, const EItemType Type);
-	virtual void HandleItemAdditionFail_Implementation(const FName Id, UObject* InventoryItemInterface, const EItemType Type);
+	void HandleItemAdditionFail(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);
+	virtual void HandleItemAdditionFail_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);
 
 	/**
 	 * If the item was successfully added to the inventory
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Operations", meta = (DisplayName = "Handle Add Item (Succeeded)"))
-	void HandleItemAdditionSuccess(const FGuid& Id, UObject* InventoryItemInterface, const EItemType Type);
-	virtual void HandleItemAdditionSuccess_Implementation(const FGuid& Id, UObject* InventoryItemInterface, const EItemType Type);
+	void HandleItemAdditionSuccess(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);
+	virtual void HandleItemAdditionSuccess_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type);
 
 
 //----------------------------------------------------------------------------------//
@@ -272,7 +273,7 @@ protected:
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Utility", meta = (DisplayName = "Get Item"))
-	bool GetItem(F_Item& ReturnedItem, FGuid Id, EItemType InventorySectionToSearch = EItemType::Inv_None);
+	bool GetItem(UPARAM(ref) F_Item& ReturnedItem, FGuid Id, EItemType InventorySectionToSearch = EItemType::Inv_None);
 	virtual bool GetItem_Implementation(F_Item& ReturnedItem, FGuid Id, EItemType InventorySectionToSearch = EItemType::Inv_None);
 
 	/**
@@ -291,8 +292,8 @@ protected:
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Utility", meta = (DisplayName = "Spawn Item"))
-	TScriptInterface<IInventoryItemInterface> SpawnWorldItem(const F_Item& Item);
-	virtual TScriptInterface<IInventoryItemInterface> SpawnWorldItem_Implementation(const F_Item& Item);
+	TScriptInterface<IInventoryItemInterface> SpawnWorldItem(const F_Item& Item, const FTransform& Location);
+	virtual TScriptInterface<IInventoryItemInterface> SpawnWorldItem_Implementation(const F_Item& Item, const FTransform& Location);
 
 	
 };

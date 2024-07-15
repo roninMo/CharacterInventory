@@ -214,7 +214,7 @@ struct FS_Item
 
 public:
 	virtual ~FS_Item() {}
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) FGuid Id;
+	UPROPERTY(BlueprintReadWrite) FGuid Id;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) FName ItemName;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 SortOrder;
 };
