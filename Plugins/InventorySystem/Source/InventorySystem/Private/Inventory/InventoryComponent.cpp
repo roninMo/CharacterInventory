@@ -3,7 +3,6 @@
 
 #include "Inventory/InventoryComponent.h"
 
-#include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
 #include "Inventory/InventoryInterface.h"
 #include "Item/BaseItem.h"
