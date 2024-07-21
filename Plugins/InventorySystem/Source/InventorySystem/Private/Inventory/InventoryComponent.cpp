@@ -213,7 +213,10 @@ bool UInventoryComponent::TryTransferItem_Implementation(const FGuid& Id, UObjec
 	{
 		bool bFromThisInventory; 
 		const bool bSuccessfullyTransferredItem = Execute_HandleTransferItem(this, Id, OtherInventoryInterface, Type, bFromThisInventory);
-		Client_TransferItemResponse(bSuccessfullyTransferredItem, Id, OtherInventoryInterface, Type, bFromThisInventory);
+
+		// The client's have trouble accessing other client's inventories (We're just recreating the item with the ItemId)
+		const FName ItemId = GetItemId(Id, Type, bFromThisInventory ? this : OtherInventoryInterface);
+		Client_TransferItemResponse(bSuccessfullyTransferredItem, Id, ItemId, OtherInventoryInterface, Type, bFromThisInventory);
 		return true;
 	}
 
@@ -225,46 +228,18 @@ void UInventoryComponent::Server_TryTransferItem_Implementation(const FGuid& Id,
 {
 	bool bFromThisInventory;
 	const bool bSuccessfullyTransferredItem = Execute_HandleTransferItem(this, Id, OtherInventoryInterface, Type, bFromThisInventory);
-	Client_TransferItemResponse(bSuccessfullyTransferredItem, Id, OtherInventoryInterface, Type, bFromThisInventory);
+
+	// The client's have trouble accessing other client's inventories (We're just recreating the item with the ItemId)
+	const FName ItemId = GetItemId(Id, Type, bFromThisInventory ? this : OtherInventoryInterface);
+	Client_TransferItemResponse(bSuccessfullyTransferredItem, Id, ItemId, OtherInventoryInterface, Type, bFromThisInventory);
 	
 	if (bDebugInventory_Server)
 	{
-		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() {2} transferred an item to {3}, id: {4}", *UEnum::GetValueAsString(GetOwner()->GetLocalRole()),
-			*FString(__FUNCTION__), bSuccessfullyTransferredItem ? "succeeded" : "failed",
+		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() {2} transferred an item to {3}, ({4}) id: {5}", *UEnum::GetValueAsString(GetOwner()->GetLocalRole()),
+			*FString(__FUNCTION__),
 			bFromThisInventory ? *GetNameSafe(GetOwner()) : *GetNameSafe(OtherInventoryInterface),
 			bFromThisInventory ? *GetNameSafe(OtherInventoryInterface) : *GetNameSafe(GetOwner()),
-			*Id.ToString()
-		);
-	}
-}
-
-
-void UInventoryComponent::Client_TransferItemResponse_Implementation(const bool bSuccess, const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type, const bool bFromThisInventory)
-{
-	const TScriptInterface<IInventoryInterface> OtherInventory = OtherInventoryInterface;
-	if (!bSuccess)
-	{
-		Execute_HandleTransferItemFail(this, Id, OtherInventoryInterface, bFromThisInventory);
-		OnInventoryItemTransferFailure.Broadcast(Id, OtherInventory, bFromThisInventory);
-	}
-	else
-	{
-		bool bWasFromThisInventory = bFromThisInventory;
-		if (ROLE_AutonomousProxy == GetOwner()->GetLocalRole()) // TODO: are extra checks on clients necessary?
-		{
-			Execute_HandleTransferItem(this, Id, OtherInventoryInterface, Type, bWasFromThisInventory);
-		}
-		
-		Execute_HandleTransferItemSuccess(this, Id, OtherInventoryInterface, bFromThisInventory);
-		OnInventoryItemTransferSuccess.Broadcast(Id, OtherInventory, bFromThisInventory);
-	}
-	
-	if (bDebugInventory_Client)
-	{
-		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() TransferItemResponse: {2}, {3} transfer item operation ->  {4}, id: {5} ", *UEnum::GetValueAsString(GetOwner()->GetLocalRole()),
-			*FString(__FUNCTION__), bSuccess ? "succeeded" : "failed",
-			bFromThisInventory ? *GetNameSafe(GetOwner()) : *GetNameSafe(OtherInventoryInterface),
-			bFromThisInventory ? *GetNameSafe(OtherInventoryInterface) : *GetNameSafe(GetOwner()),
+			bSuccessfullyTransferredItem ? "succeeded" : "failed",
 			*Id.ToString()
 		);
 	}
@@ -283,16 +258,16 @@ bool UInventoryComponent::HandleTransferItem_Implementation(const FGuid& Id, UOb
 	if (Item.IsValid()) bFromThisInventory = true;
 	else
 	{
+		OtherInventory->Execute_GetItem(OtherInventory.GetObject(), Item, Id, Type);
 		bFromThisInventory = false;
-		Item = OtherInventory->Execute_InternalGetInventoryItem(OtherInventory.GetObject(), Id, Type);
 	}
 
 	if (!Item.IsValid())
 	{
 		if (bDebugInventory_Server || bDebugInventory_Client)
 		{
-			UE_LOGFMT(InventoryLog, Error, "({0}) {1}() (invalid/not found) item: {2} searched in {3}'s inventory", *UEnum::GetValueAsString(GetOwner()->GetLocalRole()),
-				*FString(__FUNCTION__), *Id.ToString(), bFromThisInventory ? *GetNameSafe(GetOwner()) : *GetNameSafe(OtherInventoryInterface)
+			UE_LOGFMT(InventoryLog, Error, "({0}) {1}() (invalid/not found) item: {2} searched in {3} and {4}'s inventory", *UEnum::GetValueAsString(GetOwner()->GetLocalRole()),
+				*FString(__FUNCTION__), *Id.ToString(), *GetNameSafe(GetOwner()), *GetNameSafe(OtherInventoryInterface)
 			);
 		}
 		return false;
@@ -303,11 +278,17 @@ bool UInventoryComponent::HandleTransferItem_Implementation(const FGuid& Id, UOb
 	{
 		Execute_InternalRemoveInventoryItem(this, Item.Id, Item.ItemType);
 		OtherInventory->Execute_InternalAddInventoryItem(OtherInventory.GetObject(), Item);
+
+		// Client logic
+		OtherInventory->HandleTransferItemForOtherInventoryClientLogic(Item.Id, Item.ItemName, Item.ItemType, true);
 	}
 	else
 	{
 		Execute_InternalAddInventoryItem(this, Item);
 		OtherInventory->Execute_InternalRemoveInventoryItem(OtherInventory.GetObject(), Item.Id, Item.ItemType);
+		
+		// Client logic
+		OtherInventory->HandleTransferItemForOtherInventoryClientLogic(Item.Id, Item.ItemName, Item.ItemType, false);
 	}
 
 	if (bDebugInventory_Server || bDebugInventory_Client)
@@ -319,6 +300,66 @@ bool UInventoryComponent::HandleTransferItem_Implementation(const FGuid& Id, UOb
 		);
 	}
 	return true;
+}
+
+
+void UInventoryComponent::HandleTransferItemForOtherInventoryClientLogic(const FGuid& Id, const FName DatabaseId, const EItemType Type, const bool bAddItem) { Client_HandleTransferItemForOtherInventory(Id, DatabaseId, Type, bAddItem); }
+void UInventoryComponent::Client_HandleTransferItemForOtherInventory_Implementation(const FGuid& Id, const FName DatabaseId, const EItemType Type, const bool bAddItem)
+{
+	if (bAddItem)
+	{
+		F_Item Item = *CreateInventoryObject();
+		Execute_GetDataBaseItem(this, DatabaseId, Item);
+		Item.Id = Id;
+		Execute_InternalAddInventoryItem(this, Item);
+	}
+	else
+	{
+		Execute_InternalRemoveInventoryItem(this, Id, Type);
+	}
+}
+
+
+void UInventoryComponent::Client_TransferItemResponse_Implementation(const bool bSuccess, const FGuid& Id, const FName DatabaseId, UObject* OtherInventoryInterface, const EItemType Type, const bool bFromThisInventory)
+{
+	const TScriptInterface<IInventoryInterface> OtherInventory = OtherInventoryInterface;
+	if (!bSuccess)
+	{
+		Execute_HandleTransferItemFail(this, Id, OtherInventoryInterface, bFromThisInventory);
+		OnInventoryItemTransferFailure.Broadcast(Id, OtherInventory, bFromThisInventory);
+	}
+	else
+	{
+		// Handle adding the item to the inventory on this character if it was transferred to them
+		if (!bFromThisInventory && ROLE_AutonomousProxy == GetOwner()->GetLocalRole()) // TODO: are extra checks on clients necessary?
+		{
+			// Execute_HandleTransferItem(this, Id, OtherInventoryInterface, Type, bWasFromThisInventory);
+			F_Item Item = *CreateInventoryObject();
+			Execute_GetDataBaseItem(this, DatabaseId, Item);
+			Item.Id = Id;
+			
+			if (Item.IsValid()) Execute_InternalAddInventoryItem(this, Item);
+			else if (bDebugInventory_Client || bDebugInventory_Server)
+			{
+				UE_LOGFMT(InventoryLog, Error, "({0}) {1}() invalid/unable to create item: {2} for {3}'s inventory",
+					*UEnum::GetValueAsString(GetOwner()->GetLocalRole()), *FString(__FUNCTION__), *Id.ToString(), *GetNameSafe(GetOwner())
+				);
+			}
+		}
+		
+		Execute_HandleTransferItemSuccess(this, Id, OtherInventoryInterface, bFromThisInventory);
+		OnInventoryItemTransferSuccess.Broadcast(Id, OtherInventory, bFromThisInventory);
+	}
+	
+	if (bDebugInventory_Client)
+	{
+		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() TransferItemResponse: {2}, {3} transfer item operation ->  {4}, id: {5} ", *UEnum::GetValueAsString(GetOwner()->GetLocalRole()),
+			*FString(__FUNCTION__), bSuccess ? "succeeded" : "failed",
+			bFromThisInventory ? *GetNameSafe(GetOwner()) : *GetNameSafe(OtherInventoryInterface),
+			bFromThisInventory ? *GetNameSafe(OtherInventoryInterface) : *GetNameSafe(GetOwner()),
+			*Id.ToString()
+		);
+	}
 }
 
 
@@ -338,6 +379,7 @@ void UInventoryComponent::HandleTransferItemSuccess_Implementation(const FGuid& 
 {
 }
 #pragma endregion 
+
 
 
 
@@ -620,6 +662,22 @@ TScriptInterface<IInventoryItemInterface> UInventoryComponent::SpawnWorldItem_Im
 	}
 
 	return nullptr;
+}
+
+
+FName UInventoryComponent::GetItemId(const FGuid& Id, EItemType Type, UObject* InventoryInterface)
+{
+	const TScriptInterface<IInventoryInterface> Inventory = InventoryInterface;
+	if (!Inventory.GetInterface()) return FName();
+	
+	F_Item Item;
+	Execute_GetItem(this, Item, Id, Type);
+	if (!Item.IsValid() && !Inventory.GetInterface())
+	{
+		Inventory->Execute_GetItem(Inventory.GetObject(), Item, Id, Type);
+	}
+
+	return Item.ItemName;
 }
 #pragma endregion
 

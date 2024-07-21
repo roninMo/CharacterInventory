@@ -48,6 +48,10 @@ void IInventoryInterface::HandleTransferItemSuccess_Implementation(const FGuid& 
 {
 }
 
+void IInventoryInterface::HandleTransferItemForOtherInventoryClientLogic(const FGuid& Id, const FName DatabaseId, const EItemType Type, const bool bAddItem)
+{
+}
+
 bool IInventoryInterface::TryRemoveItem_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem)
 {
 	return false;

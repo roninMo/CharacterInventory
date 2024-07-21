@@ -167,6 +167,22 @@ protected:
 	void HandleTransferItemSuccess(const FGuid& Id, UObject* OtherInventoryInterface, bool bFromThisInventory);
 	virtual void HandleTransferItemSuccess_Implementation(const FGuid& Id, UObject* OtherInventoryInterface, bool bFromThisInventory);
 
+
+public:
+	/**
+	 * Utility function for handling updating the inventory information on other clients during an item transfer.
+	 * This should handle the appropriate remote procedure logic so that the other inventory's client information is updated
+	 * 
+	 * @param Id										The unique id of the inventory item.
+	 * @param DatabaseId								The id for this item in the inventory
+	 * @param Type										The item type (used for item allocation)
+	 * @param bAddItem									Whether the item is being added or removed from the inventory
+	 * 
+	 * @remark Client logic doesn't have any problems when invoking the handle logic on the client response functions, it's just problematic when there's multiple Clients (During a transfer)
+	 */
+	UFUNCTION() virtual void HandleTransferItemForOtherInventoryClientLogic(const FGuid& Id, const FName DatabaseId, const EItemType Type, const bool bAddItem);
+
+	
 	
 //----------------------------------------------------------------------------------//
 // Remove Item																		//

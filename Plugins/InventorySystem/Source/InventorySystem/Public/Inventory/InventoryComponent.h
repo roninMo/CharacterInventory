@@ -26,12 +26,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInventoryItemRemovalFailureDelegat
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInventoryItemRemovalSuccessDelegate, const F_Item&, ItemData, TScriptInterface<IInventoryItemInterface>, SpawnedItem);
 
 
+// TODO: Technically this doesn't account for dedicated servers yet, however there shouldn't be any problems
 
 UCLASS( Blueprintable, ClassGroup=(Inventory), meta=(BlueprintSpawnableComponent) )
 class INVENTORYSYSTEM_API UInventoryComponent : public UActorComponent, public IInventoryInterface
 {
 	GENERATED_BODY()
-	// TODO: Technically this doesn't account for dedicated servers yet, however there shouldn't be any problems
 
 protected:
 	/** I've divided the inventory into maps for quick retrieval, however you're able to build with arrays and other things if you want to adjust the logic */
@@ -160,7 +160,7 @@ protected:
 	
 	/** Server/Client procedure calls are not valid on interfaces, these need to be handled in the actual implementation */
 	UFUNCTION(Server, Reliable) virtual void Server_TryTransferItem(const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type);
-	UFUNCTION(Client, Reliable) virtual void Client_TransferItemResponse(const bool bSuccess, const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type, const bool bFromThisInventory);
+	UFUNCTION(Client, Reliable) virtual void Client_TransferItemResponse(const bool bSuccess, const FGuid& Id, const FName DatabaseId, UObject* OtherInventoryInterface, const EItemType Type, const bool bFromThisInventory);
 	
 	/**
 	 * The actual logic that handles transferring the item to the other inventory component
@@ -168,6 +168,19 @@ protected:
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	virtual bool HandleTransferItem_Implementation(const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type, bool& bFromThisInventory) override;
+	
+	/**
+	 * Utility function for handling updating the inventory information on other clients during an item transfer
+	 * 
+	 * @param Id										The unique id of the inventory item.
+	 * @param DatabaseId								The id for this item in the inventory
+	 * @param Type										The item type (used for item allocation)
+	 * @param bAddItem									Whether the item is being added or removed from the inventory
+	 * 
+	 * @remark Client logic doesn't have any problems when invoking the handle logic on the client response functions, it's just problematic when there's multiple Clients (During a transfer)
+	 */
+	UFUNCTION(Client, Reliable) virtual void Client_HandleTransferItemForOtherInventory(const FGuid& Id, const FName DatabaseId, const EItemType Type, const bool bAddItem);
+	// TODO: Add logic to check that the client inventory is in sync with the server, otherwise there's no problem
 	
 	/**
 	 * If the item was not transferred to the other inventory 
@@ -186,6 +199,21 @@ protected:
 
 	/** Delegate function for when an item is successfully added to the inventory. Helpful for ui elements to keep track of inventory updates */
 	UPROPERTY(BlueprintAssignable, Category = "Inventory|Operations") FInventoryItemTransferSuccessDelegate OnInventoryItemTransferSuccess;
+
+
+public:
+	/**
+	 * Utility function for handling updating the inventory information on other clients during an item transfer.
+	 * This should handle the appropriate remote procedure logic so that the other inventory's client information is updated
+	 * 
+	 * @param Id										The unique id of the inventory item.
+	 * @param DatabaseId								The id for this item in the inventory
+	 * @param Type										The item type (used for item allocation)
+	 * @param bAddItem									Whether the item is being added or removed from the inventory
+	 * 
+	 * @remark Client logic doesn't have any problems when invoking the handle logic on the client response functions, it's just problematic when there's multiple Clients (During a transfer)
+	 */
+	virtual void HandleTransferItemForOtherInventoryClientLogic(const FGuid& Id, const FName DatabaseId, const EItemType Type, const bool bAddItem) override;
 	
 	
 //----------------------------------------------------------------------------------//
@@ -304,7 +332,9 @@ protected:
 	 * */
 	virtual TScriptInterface<IInventoryItemInterface> SpawnWorldItem_Implementation(const F_Item& Item, const FTransform& Location) override;
 
-
+	/** Returns the Item Id from a specific item in the inventory  */
+	UFUNCTION() virtual FName GetItemId(const FGuid& Id, EItemType Type, UObject* InventoryInterface);
+	
 	/** Printing inventory information -> @ref ListInventory, ListSavedCharacterInformation  */
 	UFUNCTION(BlueprintCallable, Category = "Inventory|Utility|Printing") virtual void ListInventoryItem(const F_Item& Item);
 	UFUNCTION(BlueprintCallable, Category = "Inventory|Utility|Printing") virtual void ListInventoryMap(const TMap<FGuid, F_Item>& Map, FString ListName);
