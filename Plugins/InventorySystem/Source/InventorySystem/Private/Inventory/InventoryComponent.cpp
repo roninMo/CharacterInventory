@@ -541,20 +541,6 @@ void UInventoryComponent::HandleRemoveItemSuccess_Implementation(const FGuid& Id
 #pragma region Saving and Loading
 F_InventorySaveInformation UInventoryComponent::SaveInventoryInformation()
 {
-	TArray<FS_Item> InventoryItems;
-
-	if (!QuestItems.IsEmpty()) for (auto &[Id, Item] : QuestItems) InventoryItems.Add(CreateSavedItem(Item));
-	if (!CommonItems.IsEmpty()) for (auto &[Id, Item] : CommonItems) InventoryItems.Add(CreateSavedItem(Item));
-	if (!Weapons.IsEmpty()) for (auto &[Id, Item] : Weapons) InventoryItems.Add(CreateSavedItem(Item));
-	if (!Armors.IsEmpty()) for (auto &[Id, Item] : Armors) InventoryItems.Add(CreateSavedItem(Item));
-	if (!Materials.IsEmpty()) for (auto &[Id, Item] : Materials) InventoryItems.Add(CreateSavedItem(Item));
-	if (!Notes.IsEmpty()) for (auto &[Id, Item] : Notes) InventoryItems.Add(CreateSavedItem(Item));
-	
-	F_InventorySaveInformation SaveInformation;
-	SaveInformation.InventoryItems = InventoryItems;
-
-	return SaveInformation;
-
 	/*
 		UPlayerSaveInformation* SaveInformation = NewObject<UPlayerSaveInformation>();
 		if (SaveInformation)
@@ -568,6 +554,20 @@ F_InventorySaveInformation UInventoryComponent::SaveInventoryInformation()
 		UPlayerSaveInformation* SaveInformation = Cast<UPlayerSaveInformation>(UGameplayStatics::LoadGameFromSlot(SaveData.PlatformId, SaveData.NetId));
 		if (SaveInformation) SaveData = SaveInformation->CharacterInformation;
 	*/
+	
+	TArray<FS_Item> InventoryItems;
+
+	if (!QuestItems.IsEmpty()) for (auto &[Id, Item] : QuestItems) InventoryItems.Add(CreateSavedItem(Item));
+	if (!CommonItems.IsEmpty()) for (auto &[Id, Item] : CommonItems) InventoryItems.Add(CreateSavedItem(Item));
+	if (!Weapons.IsEmpty()) for (auto &[Id, Item] : Weapons) InventoryItems.Add(CreateSavedItem(Item));
+	if (!Armors.IsEmpty()) for (auto &[Id, Item] : Armors) InventoryItems.Add(CreateSavedItem(Item));
+	if (!Materials.IsEmpty()) for (auto &[Id, Item] : Materials) InventoryItems.Add(CreateSavedItem(Item));
+	if (!Notes.IsEmpty()) for (auto &[Id, Item] : Notes) InventoryItems.Add(CreateSavedItem(Item));
+	
+	F_InventorySaveInformation SaveInformation;
+	SaveInformation.InventoryItems = InventoryItems;
+
+	return SaveInformation;
 }
 
 
