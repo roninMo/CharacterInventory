@@ -56,9 +56,9 @@ enum class EInventoryOperation : uint8
 
 
 /**
-*	 Information specific to an item for displaying in the inventory and spawning them in the world
-*	 Also contains the information to access and construct the specific item that the character has taken
-*/
+ *	 Information specific to an item for displaying in the inventory and spawning them in the world
+ *	 Also contains the information to access and construct the specific item that the character has taken
+ */
 USTRUCT(BlueprintType)
 struct F_Item
 {
@@ -75,7 +75,7 @@ struct F_Item
 			const EItemType ItemType = EItemType::Inv_None,
 
 			const TSubclassOf<UObject> ActualClass = nullptr,
-			const TSubclassOf<ABaseItem> WorldClass = nullptr,
+			const TSubclassOf<AActor> WorldClass = nullptr,
 			UDataAsset* GlobalInformation = nullptr
 		) :
 	
@@ -114,11 +114,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) EItemType ItemType;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) UTexture2D* Image;
 
-	/** The actual class of this item. This could be from a weapon to an activatable item, and it's information is mapped through the item type.. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) TSubclassOf<UObject> ActualClass; // this should reference the inventory interface
+	/**
+	 * The actual class of this item. This could be from a weapon to an activatable item, and it's information is mapped through the item type.
+	 * @remarks This should reference the inventory interface or use the ItemBase class
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) TSubclassOf<UObject> ActualClass;
 	
-	/** The class of this item that's spawned in the world that the character interacts with.. */	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) TSubclassOf<ABaseItem> WorldClass;
+	/**
+	 * The class of this item that's spawned in the world that the character interacts with.
+	 * @remarks This should reference the inventory interface or use the ItemBase class
+	 * 
+	 */	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) TSubclassOf<AActor> WorldClass;
 	
 	/** Global data for items that's added to the object from the blueprint */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) UDataAsset* GlobalInformation;
@@ -167,12 +174,12 @@ public:
 
 
 
-/*
-* This is the data table to hold all the item information for the game.
-* All objects derive from this information
-* @note This is the raw item information, everything in the game has been configured to use @ref F_InventoryItem because it holds information unique to that instance
-* @ref I would add the unique information using another object that's linked to the item, for performance reasons. Otherwise you'll have to refactor networking code and that impacts performance 
-*/
+/**
+ * This is the data table to hold all the item information for the game.
+ * All objects derive from this information
+ * @note This is the raw item information, everything in the game has been configured to use @ref F_InventoryItem because it holds information unique to that instance
+ * @ref I would add the unique information using another object that's linked to the item, for performance reasons. Otherwise you'll have to refactor networking code and that impacts performance 
+ */
 USTRUCT(BlueprintType)
 struct FInventory_ItemDatabase : public FTableRowBase
 {
@@ -188,9 +195,9 @@ protected:
 
 
 
-/*
-* The raw information passed to the server for capturing and saving inventory information
-*/
+/**
+ * The raw information passed to the server for capturing and saving inventory information
+ */
 USTRUCT(BlueprintType)
 struct FS_Item
 {
@@ -222,9 +229,9 @@ public:
 
 
 
-/*
-* Weapon information like levels and any other values that are edited or differentiate from when this was created
-*/
+/**
+ * Weapon information like levels and any other values that are edited or differentiate from when this was created
+ */
 USTRUCT(BlueprintType)
 struct FS_WeaponInformation
 {
@@ -246,9 +253,9 @@ public:
 
 
 
-/*
-* The save information pertaining to the character
-*/
+/**
+ * The save information pertaining to the character
+ */
 USTRUCT(BlueprintType)
 struct FS_CharacterInformation
 {

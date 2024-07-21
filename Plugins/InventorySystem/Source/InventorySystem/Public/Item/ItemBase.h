@@ -5,10 +5,10 @@
 #include "CoreMinimal.h"
 #include "InventoryItemInterface.h"
 #include "GameFramework/Actor.h"
-#include "BaseItem.generated.h"
+#include "ItemBase.generated.h"
 
 UCLASS( Blueprintable, ClassGroup=(Inventory) )
-class INVENTORYSYSTEM_API ABaseItem : public AActor, public IInventoryItemInterface
+class CHARACTERINVENTORY_API AItemBase : public AActor, public IInventoryItemInterface
 {
 	GENERATED_BODY()
 	
@@ -30,7 +30,7 @@ protected:
 
 	
 public:	
-	ABaseItem();
+	AItemBase();
 
 	/** Function for dynamically adding default information to inventory items */
 	virtual void InitializeItemGlobals();
@@ -81,7 +81,7 @@ public:
 // Utility																									//
 //----------------------------------------------------------------------------------------------------------//
 	/** Adds the item information database */
-	virtual void SetItemInformationDatabase_Implementation(UDataTable* Database);
+	virtual void SetItemInformationDatabase_Implementation(UDataTable* Database) override;
 	
 	/** Retrieves an item from the data table. Returns null if the item was not found */
 	UFUNCTION(BlueprintCallable) virtual bool RetrieveItemFromDataTable(FName Id, F_Item& ItemData);

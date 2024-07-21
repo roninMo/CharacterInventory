@@ -1,13 +1,13 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Item/BaseItem.h"
+#include "Item/ItemBase.h"
 
 #include "Inventory/InventoryComponent.h"
 #include "Logging/StructuredLog.h"
 
 // Sets default values
-ABaseItem::ABaseItem()
+AItemBase::AItemBase()
 {
 	// Network values
 	PrimaryActorTick.bCanEverTick = false;
@@ -32,7 +32,7 @@ ABaseItem::ABaseItem()
 }
 
 
-void ABaseItem::InitializeItemGlobals()
+void AItemBase::InitializeItemGlobals()
 {
 	// Ex item globals function.
 	if (!Item.GlobalInformation) return;
@@ -43,7 +43,7 @@ void ABaseItem::InitializeItemGlobals()
 }
 
 
-void ABaseItem::BeginPlay()
+void AItemBase::BeginPlay()
 {
 	Super::BeginPlay();
 	InitializeItemGlobals();
@@ -61,7 +61,7 @@ void ABaseItem::BeginPlay()
 }
 
 
-void ABaseItem::CreateIdIfNull()
+void AItemBase::CreateIdIfNull()
 {
 	if (Item.Id == FGuid())
 	{
@@ -70,26 +70,26 @@ void ABaseItem::CreateIdIfNull()
 }
 
 
-void ABaseItem::Tick(float DeltaSeconds)
+void AItemBase::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 }
 
 
 #pragma region Inventory item functions
-F_Item ABaseItem::GetItem_Implementation() const				{ return Item; }
-const EItemType ABaseItem::GetItemType_Implementation() const	{ return Item.ItemType; }
-const FGuid ABaseItem::GetId_Implementation() const				{ return Item.Id; }
-const FName ABaseItem::GetItemName_Implementation() const		{ return Item.ItemName; }
-void ABaseItem::SetItem_Implementation(const F_Item Data)		{ Item = Data; }
-void ABaseItem::SetId_Implementation(const FGuid& Id)			{ Item.Id = Id; }
-bool ABaseItem::IsSafeToAdjustItem_Implementation() const { return PendingPlayer == nullptr; }
-void ABaseItem::SetPlayerPending_Implementation(ACharacter* Player) { PendingPlayer = Player; }
-ACharacter* ABaseItem::GetPlayerPending_Implementation() { return PendingPlayer; }
-void ABaseItem::SetItemInformationDatabase_Implementation(UDataTable* Database) { ItemInformationTable = Database; }
+F_Item AItemBase::GetItem_Implementation() const				{ return Item; }
+const EItemType AItemBase::GetItemType_Implementation() const	{ return Item.ItemType; }
+const FGuid AItemBase::GetId_Implementation() const				{ return Item.Id; }
+const FName AItemBase::GetItemName_Implementation() const		{ return Item.ItemName; }
+void AItemBase::SetItem_Implementation(const F_Item Data)		{ Item = Data; }
+void AItemBase::SetId_Implementation(const FGuid& Id)			{ Item.Id = Id; }
+bool AItemBase::IsSafeToAdjustItem_Implementation() const { return PendingPlayer == nullptr; }
+void AItemBase::SetPlayerPending_Implementation(ACharacter* Player) { PendingPlayer = Player; }
+ACharacter* AItemBase::GetPlayerPending_Implementation() { return PendingPlayer; }
+void AItemBase::SetItemInformationDatabase_Implementation(UDataTable* Database) { ItemInformationTable = Database; }
 
 
-bool ABaseItem::RetrieveItemFromDataTable(const FName Id, F_Item& ItemData)
+bool AItemBase::RetrieveItemFromDataTable(const FName Id, F_Item& ItemData)
 {
 	if (ItemInformationTable)
 	{

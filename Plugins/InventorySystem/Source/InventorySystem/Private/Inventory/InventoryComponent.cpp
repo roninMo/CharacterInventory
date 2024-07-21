@@ -6,8 +6,9 @@
 #include "Engine/PackageMapClient.h"
 #include "GameFramework/Character.h"
 #include "Inventory/InventoryInterface.h"
-#include "Item/BaseItem.h"
+#include "Item/ItemBase.h"
 #include "Item/InventoryItemInterface.h"
+#include "Item/ItemBase.h"
 #include "Logging/StructuredLog.h"
 
 DEFINE_LOG_CATEGORY(InventoryLog);
@@ -671,7 +672,7 @@ TScriptInterface<IInventoryItemInterface> UInventoryComponent::SpawnWorldItem_Im
 		SpawnLocation.Z = SpawnLocation.Z + 34.0f;
 		SpawnTransform.SetLocation(SpawnLocation);
 
-		if (ABaseItem* SpawnedItem = GetWorld()->SpawnActor<ABaseItem>(Item.WorldClass, SpawnTransform, SpawnParameters))
+		if (AItemBase* SpawnedItem = GetWorld()->SpawnActor<AItemBase>(Item.WorldClass, SpawnTransform, SpawnParameters))
 		{
 			const TScriptInterface<IInventoryItemInterface> WorldItem = SpawnedItem;
 			SpawnedItem->Execute_SetItemInformationDatabase(SpawnedItem, ItemDatabase);
