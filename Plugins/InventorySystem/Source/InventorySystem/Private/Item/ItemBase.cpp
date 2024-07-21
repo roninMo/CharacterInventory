@@ -100,7 +100,7 @@ bool AItemBase::RetrieveItemFromDataTable(const FName Id, F_Item& ItemData)
 			return true;
 		}
 		
-		UE_LOGFMT(InventoryLog, Error, "{1} Did not find the item to create {2}! {3}()", *GetName(), *Id.ToString(), *FString(__FUNCTION__));
+		UE_LOGFMT(InventoryLog, Error, "{0}() {1} Did not find the item {2} to create!", *FString(__FUNCTION__), *GetName(), Id);
 	}
 
 	return false;
