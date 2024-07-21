@@ -330,20 +330,28 @@ void UInventoryComponent::Client_TransferItemResponse_Implementation(const bool 
 	}
 	else
 	{
-		// Handle adding the item to the inventory on this character if it was transferred to them
-		if (!bFromThisInventory && ROLE_AutonomousProxy == GetOwner()->GetLocalRole()) // TODO: are extra checks on clients necessary?
+		// Handle removing or adding the item to the inventory on this character if it was transferred to them
+		if (ROLE_AutonomousProxy == GetOwner()->GetLocalRole()) // TODO: are extra checks on clients necessary?
 		{
-			// Execute_HandleTransferItem(this, Id, OtherInventoryInterface, Type, bWasFromThisInventory);
-			F_Item Item = *CreateInventoryObject();
-			Execute_GetDataBaseItem(this, DatabaseId, Item);
-			Item.Id = Id;
-			
-			if (Item.IsValid()) Execute_InternalAddInventoryItem(this, Item);
-			else if (bDebugInventory_Client || bDebugInventory_Server)
+			// Add the item on the client
+			if (!bFromThisInventory)
 			{
-				UE_LOGFMT(InventoryLog, Error, "({0}) {1}() invalid/unable to create item: {2} for {3}'s inventory",
-					*UEnum::GetValueAsString(GetOwner()->GetLocalRole()), *FString(__FUNCTION__), *Id.ToString(), *GetNameSafe(GetOwner())
-				);
+				// Execute_HandleTransferItem(this, Id, OtherInventoryInterface, Type, bWasFromThisInventory);
+				F_Item Item = *CreateInventoryObject();
+				Execute_GetDataBaseItem(this, DatabaseId, Item);
+				Item.Id = Id;
+				
+				if (Item.IsValid()) Execute_InternalAddInventoryItem(this, Item);
+				else if (bDebugInventory_Client || bDebugInventory_Server)
+				{
+					UE_LOGFMT(InventoryLog, Error, "({0}) {1}() invalid/unable to create item: {2} for {3}'s inventory",
+						*UEnum::GetValueAsString(GetOwner()->GetLocalRole()), *FString(__FUNCTION__), *Id.ToString(), *GetNameSafe(GetOwner())
+					);
+				}
+			}
+			else
+			{
+				Execute_InternalRemoveInventoryItem(this, Id, Type);
 			}
 		}
 		
