@@ -16,8 +16,8 @@ DECLARE_LOG_CATEGORY_EXTERN(InventoryLog, Log, All);
 #define OP__InventoryToInventory EInventoryOperation::OP_InventoryToInventory
 
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FInventoryAddtionFailureDelegate, const FGuid&, Id, const FName, DatabaseId, TScriptInterface<IInventoryItemInterface>, SpawnedItem);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInventoryAddtionSuccessDelegate, const F_Item&, ItemData, TScriptInterface<IInventoryItemInterface>, SpawnedItem);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FInventoryAdditionFailureDelegate, const FGuid&, Id, const FName, DatabaseId, TScriptInterface<IInventoryItemInterface>, SpawnedItem);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInventoryAdditionSuccessDelegate, const F_Item&, ItemData, TScriptInterface<IInventoryItemInterface>, SpawnedItem);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FInventoryItemTransferFailureDelegate, const FGuid&, Id, const TScriptInterface<IInventoryInterface>, OtherInventory, const bool, bFromThisInventory);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FInventoryItemTransferSuccessDelegate, const FGuid&, Id, const TScriptInterface<IInventoryInterface>, OtherInventory, const bool, bFromThisInventory);
@@ -112,7 +112,7 @@ protected:
 	virtual void HandleItemAdditionFail_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type) override;
 
 	/** Delegate function for when an item failed to be added to the inventory. Helpful for ui elements to keep track of inventory updates */
-	UPROPERTY(BlueprintAssignable, Category = "Inventory|Operations") FInventoryAddtionFailureDelegate OnInventoryItemAdditionFailure;
+	UPROPERTY(BlueprintAssignable, Category = "Inventory|Operations") FInventoryAdditionFailureDelegate OnInventoryItemAdditionFailure;
 	
 	/**
 	 * If the item was successfully added to the inventory
@@ -121,7 +121,7 @@ protected:
 	virtual void HandleItemAdditionSuccess_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type) override;
 
 	/** Delegate function for when an item is successfully added to the inventory. Helpful for ui elements to keep track of inventory updates */
-	UPROPERTY(BlueprintAssignable, Category = "Inventory|Operations") FInventoryAddtionSuccessDelegate OnInventoryItemAdditionSuccess;
+	UPROPERTY(BlueprintAssignable, Category = "Inventory|Operations") FInventoryAdditionSuccessDelegate OnInventoryItemAdditionSuccess;
 	
 	
 //----------------------------------------------------------------------------------//
@@ -254,7 +254,7 @@ protected:
 	
 	/** Server/Client procedure calls are not valid on interfaces, these need to be handled in the actual implementation */
 	UFUNCTION(Server, Reliable) void Server_TryRemoveItem(const FGuid& Id, const EItemType Type, bool bDropItem);
-	UFUNCTION(Client, Reliable) void Client_RemoveItemResponse(const bool bSuccess, const FGuid& Id, const EItemType Type, bool bDropItem, UObject* SpawnedItem);
+	UFUNCTION(Client, Reliable) void Client_RemoveItemResponse(const bool bSuccess, const FGuid& Id, const FName DatabaseId, const EItemType Type, bool bDropItem, UObject* SpawnedItem);
 	
 	/**
 	 * The actual logic that handles removing the item from the inventory component
@@ -308,7 +308,7 @@ public:
 	
 public:
 	/** Returns the Item Id from a specific item in the inventory  */
-	UFUNCTION() virtual FName GetItemId(const FGuid& Id, EItemType Type, UObject* InventoryInterface);
+	UFUNCTION() virtual FName GetItemId(const FGuid& Id, EItemType Type, UObject* OtherInventory = nullptr);
 	
 	/** Returns the character's id (a combination of both the NetId and the PlatformId */
 	virtual FString GetPlayerId_Implementation() const override;

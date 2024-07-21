@@ -3,8 +3,6 @@
 
 #include "Inventory/InventoryComponent.h"
 
-#include <string>
-
 #include "Engine/PackageMapClient.h"
 #include "GameFramework/Character.h"
 #include "Inventory/InventoryInterface.h"
@@ -220,7 +218,7 @@ bool UInventoryComponent::TryTransferItem_Implementation(const FGuid& Id, UObjec
 		const bool bSuccessfullyTransferredItem = Execute_HandleTransferItem(this, Id, OtherInventoryInterface, Type, bFromThisInventory);
 
 		// The client's have trouble accessing other client's inventories (We're just recreating the item with the ItemId)
-		const FName ItemId = GetItemId(Id, Type, bFromThisInventory ? this : OtherInventoryInterface);
+		const FName ItemId = GetItemId(Id, Type, OtherInventoryInterface);
 		Client_TransferItemResponse(bSuccessfullyTransferredItem, Id, ItemId, OtherInventoryInterface, Type, bFromThisInventory);
 		return true;
 	}
@@ -233,11 +231,8 @@ void UInventoryComponent::Server_TryTransferItem_Implementation(const FGuid& Id,
 {
 	bool bFromThisInventory;
 	const bool bSuccessfullyTransferredItem = Execute_HandleTransferItem(this, Id, OtherInventoryInterface, Type, bFromThisInventory);
-	const FName ItemId = GetItemId(Id, Type, bFromThisInventory ? this : OtherInventoryInterface);
+	FName ItemId = GetItemId(Id, Type, OtherInventoryInterface);
 
-	// The client's have trouble accessing other client's inventories (We're just recreating the item with the ItemId)
-	Client_TransferItemResponse(bSuccessfullyTransferredItem, Id, ItemId, OtherInventoryInterface, Type, bFromThisInventory);
-	
 	if (bDebugInventory_Server)
 	{
 		const TScriptInterface<IInventoryInterface> InventoryInterface = OtherInventoryInterface;
@@ -252,6 +247,9 @@ void UInventoryComponent::Server_TryTransferItem_Implementation(const FGuid& Id,
 			ItemId, *Id.ToString()
 		);
 	}
+	
+	// The client's have trouble accessing other client's inventories (We're just recreating the item with the ItemId)
+	Client_TransferItemResponse(bSuccessfullyTransferredItem, Id, ItemId, OtherInventoryInterface, Type, bFromThisInventory);
 }
 
 
@@ -415,8 +413,9 @@ bool UInventoryComponent::TryRemoveItem_Implementation(const FGuid& Id, const EI
 	else if (Character->HasAuthority())
 	{
 		UObject* SpawnedItem;
+		FName ItemId = GetItemId(Id, Type);
 		const bool bSuccessfullyRemovedItem = Execute_HandleRemoveItem(this, Id, Type, bDropItem, SpawnedItem);
-		Client_RemoveItemResponse(bSuccessfullyRemovedItem, Id, Type, bDropItem, SpawnedItem);
+		Client_RemoveItemResponse(bSuccessfullyRemovedItem, Id, ItemId, Type, bDropItem, SpawnedItem);
 		return true;
 	}
 
@@ -427,9 +426,8 @@ bool UInventoryComponent::TryRemoveItem_Implementation(const FGuid& Id, const EI
 void UInventoryComponent::Server_TryRemoveItem_Implementation(const FGuid& Id, const EItemType Type, const bool bDropItem)
 {
 	UObject* SpawnedItem;
-	FName ItemId = GetItemId(Id, Type, this);
+	FName ItemId = GetItemId(Id, Type);
 	const bool bSuccessfullyRemovedItem = Execute_HandleRemoveItem(this, Id, Type, bDropItem, SpawnedItem);
-	Client_RemoveItemResponse(bSuccessfullyRemovedItem, Id, Type, bDropItem, SpawnedItem);
 	
 	if (bDebugInventory_Server)
 	{
@@ -440,6 +438,8 @@ void UInventoryComponent::Server_TryRemoveItem_Implementation(const FGuid& Id, c
 			ItemId, *Id.ToString()
 		);
 	}
+	
+	Client_RemoveItemResponse(bSuccessfullyRemovedItem, Id, ItemId, Type, bDropItem, SpawnedItem);
 }
 
 
@@ -467,7 +467,7 @@ bool UInventoryComponent::HandleRemoveItem_Implementation(const FGuid& Id, const
 
 	if (bDebugInventory_Server || bDebugInventory_Client)
 	{
-		FName ItemId = GetItemId(Id, Type, this);
+		FName ItemId = GetItemId(Id, Type);
 		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() InventoryRemoval: {2} - {3}({4}) ",
 			*UEnum::GetValueAsString(GetOwner()->GetLocalRole()), *FString(__FUNCTION__),
 			*Execute_GetPlayerId(this),
@@ -480,11 +480,9 @@ bool UInventoryComponent::HandleRemoveItem_Implementation(const FGuid& Id, const
 }
 
 
-
-void UInventoryComponent::Client_RemoveItemResponse_Implementation(const bool bSuccess, const FGuid& Id, const EItemType Type, const bool bDropItem, UObject* SpawnedItem)
+void UInventoryComponent::Client_RemoveItemResponse_Implementation(const bool bSuccess, const FGuid& Id, const FName DatabaseId, const EItemType Type, const bool bDropItem, UObject* SpawnedItem)
 {
 	const TScriptInterface<IInventoryItemInterface> SpawnedItemInterface = SpawnedItem;
-	FName ItemId = GetItemId(Id, Type, this);
 	
 	if (!bSuccess)
 	{
@@ -494,9 +492,9 @@ void UInventoryComponent::Client_RemoveItemResponse_Implementation(const bool bS
 	else
 	{
 		if (ROLE_AutonomousProxy == GetOwner()->GetLocalRole()) // TODO: are extra checks on clients necessary?
-			{
+		{
 			Execute_HandleRemoveItem(this, Id, Type, false, SpawnedItem);
-			}
+		}
 		
 		Execute_HandleRemoveItemSuccess(this, Id, Type, bDropItem, SpawnedItem);
 		OnInventoryItemRemovalSuccess.Broadcast(Id, SpawnedItemInterface);
@@ -507,7 +505,7 @@ void UInventoryComponent::Client_RemoveItemResponse_Implementation(const bool bS
 		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() RemoveItemResponse: {2}, {3} remove item operation ->  {4}({5}) {6}", *UEnum::GetValueAsString(GetOwner()->GetLocalRole()),
 			*FString(__FUNCTION__), bSuccess ? "succeeded" : "failed",
 			*Execute_GetPlayerId(this),
-			ItemId, *Id.ToString(),
+			DatabaseId, *Id.ToString(),
 			bDropItem ? "(dropped)" : ""
 		);
 	}
@@ -696,18 +694,23 @@ TScriptInterface<IInventoryItemInterface> UInventoryComponent::SpawnWorldItem_Im
 }
 
 
-FName UInventoryComponent::GetItemId(const FGuid& Id, EItemType Type, UObject* InventoryInterface)
+FName UInventoryComponent::GetItemId(const FGuid& Id, EItemType Type, UObject* OtherInventory)
 {
-	const TScriptInterface<IInventoryInterface> Inventory = InventoryInterface;
-	if (!Inventory.GetInterface()) return FName();
-	
 	F_Item Item;
 	Execute_GetItem(this, Item, Id, Type);
-	if (!Item.IsValid() && !Inventory.GetInterface())
-	{
-		Inventory->Execute_GetItem(Inventory.GetObject(), Item, Id, Type);
-	}
 
+	if (Item.IsValid())
+	{
+		return Item.ItemName;
+	}
+	
+	const TScriptInterface<IInventoryInterface> Inventory = OtherInventory;
+	if (!Inventory.GetInterface())
+	{
+		return FName();
+	}
+	
+	Inventory->Execute_GetItem(Inventory.GetObject(), Item, Id, Type);
 	return Item.ItemName;
 }
 
