@@ -56,6 +56,34 @@ enum class EInventoryOperation : uint8
 
 
 /**
+ *	The state of saving and loading character information. 
+ */
+UENUM(BlueprintType)
+enum class ESaveState : uint8
+{
+	/** Everything is either saved or there's no need to save anything */
+	ESave_None							UMETA(DisplayName = "None"),
+	
+	/** There's new save information, and the character state needs to be updated */
+	ESave_NeedsSaving					UMETA(DisplayName = "NeedsSaving"),
+	
+	/** The save information is being sent to the client, and is pending completion */
+	ESave_Pending						UMETA(DisplayName = "Pending"),
+
+	/** The save information has been sent to the client and ready for use */
+	ESave_SaveReady						UMETA(DisplayName = "SaveReady"),
+	
+	/** The information has been saved */
+	ESave_Saved							UMETA(DisplayName = "Saved"),
+	
+	/** An error occurred while saving the player information! */
+	ESave_Error                         UMETA(DisplayName = "Error"),
+};
+
+
+
+
+/**
  *	 Information specific to an item for displaying in the inventory and spawning them in the world
  *	 Also contains the information to access and construct the specific item that the character has taken
  */

@@ -8,6 +8,7 @@
 #include "Components/ActorComponent.h"
 #include "InventoryComponent.generated.h"
 
+
 DECLARE_LOG_CATEGORY_EXTERN(InventoryLog, Log, All);
 
 #define OP__IndividualInventory EInventoryOperation::OP_IndividualInventory
@@ -25,8 +26,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FInventoryItemTransferSuccessDele
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInventoryItemRemovalFailureDelegate, const FGuid&, Id, TScriptInterface<IInventoryItemInterface>, SpawnedItem);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInventoryItemRemovalSuccessDelegate, const F_Item&, ItemData, TScriptInterface<IInventoryItemInterface>, SpawnedItem);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLoadSaveDataInventoryDelegate, bool, bSuccessfullySavedInventory);
 
 // TODO: Technically this doesn't account for dedicated servers yet, however there shouldn't be any problems
+
 
 UCLASS( Blueprintable, ClassGroup=(Inventory), meta=(BlueprintSpawnableComponent) )
 class INVENTORYSYSTEM_API UInventoryComponent : public UActorComponent, public IInventoryInterface
@@ -57,7 +60,9 @@ protected:
 protected:
 	UInventoryComponent();
 	virtual void BeginPlay() override;
-	
+	// Saving the inventory information should be handled in the player state!
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
 	
 //----------------------------------------------------------------------------------//
 // Item Addition																	//
@@ -287,22 +292,59 @@ protected:
 //----------------------------------------------------------------------------------//
 // Saving																			//
 //----------------------------------------------------------------------------------//
+protected:
+	/** The save state of the inventory. Used when the player is saving information for communication between the server and client to determine when the client has retrieved it's save information  */
+	UPROPERTY(BlueprintReadWrite, Transient, Category = "Inventory|Saving") ESaveState SaveState;
+
+	/** The current inventory save data. This isn't updated until the server has sent all it's inventory information */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Transient, Category = "Inventory|Saving") F_InventorySaveInformation CurrentInventorySaveData;
+
+	/** This is a value to store the information that's sent to the client. Once everything has been sent to the client, the current inventory save data is updated with this information */
+	UPROPERTY(BlueprintReadWrite, Transient, Category = "Inventory|Saving") F_InventorySaveInformation ClientInventorySaveData;
+	
+	
 public:
 	/** Saves the player's inventory and returns the inventory information */
 	UFUNCTION(BlueprintCallable, Category = "Inventory|Saving and Loading") virtual F_InventorySaveInformation SaveInventoryInformation();
 
+	/**
+	 * Loads the player's inventory on both the server and client from a list of saved inventory items. 
+	 *
+	 * @param SaveInformation			The save information object containing the player's inventory information
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Saving and Loading") virtual void LoadInventoryInformation(const F_InventorySaveInformation& SaveInformation);
+
+	/** Delegate function for when they've loaded to the client's save information */
+	UPROPERTY(BlueprintAssignable) FOnLoadSaveDataInventoryDelegate OnLoadSaveData;
+
 	
 protected:
+	/** Start sending saved inventory information to the client */
+	UFUNCTION(Client, Reliable) virtual void Client_BeginLoadingInventoryData();
+	
+	/** Sends some of the current save's inventory information to the client
+	 * @note this is done in multiple calls to avoid network issues (RPC's default data limits are 64kb)
+	 */
+	UFUNCTION(Client, Reliable) virtual void Client_LoadSomeInventoryData(const TArray<FS_Item>& Items);
+
+	/** Sets the current save data to the captured client information. Called once all the client information has been sent */
+	UFUNCTION(Client, Reliable) virtual void Client_LoadSaveDataCompleted();
+
+	/**
+	 * Updates the inventory information with the player state's current save data. This is called in HandleSaveInformation during play based on the SaveState of the inventory
+	 * 
+	 * @param SaveInformation			The save information object containing the player's inventory information
+	 * 
+	 * @returns true if every inventory item is successfully added
+	 */
+	UFUNCTION(BlueprintCallable) virtual bool UpdateInventoryInformation(const F_InventorySaveInformation& SaveInformation);
+	
+	/** Function for handling the save state information once a player loads the inventory information. Updates the inventory if they retrieved new save information */
+	UFUNCTION(BlueprintCallable) virtual void UpdateInventoryAfterRetrievingSaveInformation();
+	
 	/** Create a save item from an inventory item */
 	UFUNCTION(BlueprintCallable, Category = "Inventory|Saving and Loading") virtual FS_Item CreateSavedItem(const F_Item& Item) const;
 
-	/**
-	 * Loads the player's inventory from a list of saved inventory items
-	 *
-	 * @param SaveInformation			The save information object containing the player's inventory information
-	 * @returns true if every inventory item is successfully added
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Saving and Loading") virtual bool LoadInventoryInformation(const F_InventorySaveInformation& SaveInformation);
 	
 	
 //----------------------------------------------------------------------------------//
@@ -359,6 +401,12 @@ protected:
 	/** Creates the inventory item object for adding things to the inventory. If you want to subclass the inventory object, use this function */
 	virtual F_Item* CreateInventoryObject() const override;
 	
+	/** Access the save state on the client to know when to update the character information */
+	UFUNCTION(BlueprintCallable) virtual ESaveState GetSaveState();
+	
+	/** Access the save state on the client to know when to update the character information */
+	UFUNCTION(BlueprintCallable) virtual void SetSaveState(ESaveState State);
+
 	/** Checks if the character is valid and if not, gets the character component and returns true */
 	UFUNCTION(BlueprintCallable) virtual bool GetCharacter();
 	

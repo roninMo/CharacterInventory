@@ -31,6 +31,11 @@ void UInventoryComponent::BeginPlay()
 }
 
 
+void UInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	UpdateInventoryAfterRetrievingSaveInformation();
+}
 
 
 #pragma region Inventory retrieval logic
@@ -533,6 +538,160 @@ void UInventoryComponent::HandleRemoveItemSuccess_Implementation(const FGuid& Id
 
 
 
+#pragma region Saving and Loading
+F_InventorySaveInformation UInventoryComponent::SaveInventoryInformation()
+{
+	TArray<FS_Item> InventoryItems;
+
+	if (!QuestItems.IsEmpty()) for (auto &[Id, Item] : QuestItems) InventoryItems.Add(CreateSavedItem(Item));
+	if (!CommonItems.IsEmpty()) for (auto &[Id, Item] : CommonItems) InventoryItems.Add(CreateSavedItem(Item));
+	if (!Weapons.IsEmpty()) for (auto &[Id, Item] : Weapons) InventoryItems.Add(CreateSavedItem(Item));
+	if (!Armors.IsEmpty()) for (auto &[Id, Item] : Armors) InventoryItems.Add(CreateSavedItem(Item));
+	if (!Materials.IsEmpty()) for (auto &[Id, Item] : Materials) InventoryItems.Add(CreateSavedItem(Item));
+	if (!Notes.IsEmpty()) for (auto &[Id, Item] : Notes) InventoryItems.Add(CreateSavedItem(Item));
+	
+	F_InventorySaveInformation SaveInformation;
+	SaveInformation.InventoryItems = InventoryItems;
+
+	return SaveInformation;
+
+	/*
+		UPlayerSaveInformation* SaveInformation = NewObject<UPlayerSaveInformation>();
+		if (SaveInformation)
+		{
+			SaveInformation->CharacterInformation = SaveData;
+			UGameplayStatics::SaveGameToSlot(SaveInformation, SaveData.PlatformId, SaveData.NetId);
+			OnSaveData.Broadcast();
+		}
+
+		FString SlotName = SaveData.PlatformId; // + SaveData.NetId;
+		UPlayerSaveInformation* SaveInformation = Cast<UPlayerSaveInformation>(UGameplayStatics::LoadGameFromSlot(SaveData.PlatformId, SaveData.NetId));
+		if (SaveInformation) SaveData = SaveInformation->CharacterInformation;
+	*/
+}
+
+
+void UInventoryComponent::LoadInventoryInformation(const F_InventorySaveInformation& SaveInformation)
+{
+	if (!GetCharacter() || !Character->HasAuthority()) return;
+	if (bDebugSaveInformation)
+	{
+		UE_LOGFMT(InventoryLog, Warning, "{0} {1}() Loading the [{2}][{3}]'s inventory from saved information.",
+			*UEnum::GetValueAsString(Character->GetLocalRole()), *FString(__FUNCTION__), NetId, PlatformId
+		);
+		ListSavedInventory(SaveInformation);
+	}
+	
+	// Load inventory items @note We might get errors if we send over everything altogether, so this is divided into multiple functions
+	TArray<FS_Item> InventoryItems;
+	for (int i = 0; i < SaveInformation.InventoryItems.Num(); i++)
+	{
+		InventoryItems.Add(SaveInformation.InventoryItems[i]);
+		if (InventoryItems.Num() >= 45)
+		{
+			Client_LoadSomeInventoryData(InventoryItems);
+			InventoryItems.Empty();
+		}
+	}
+	if (!InventoryItems.IsEmpty())
+	{
+		Client_LoadSomeInventoryData(InventoryItems);
+	}
+	
+	Client_LoadSaveDataCompleted();
+}
+
+
+void UInventoryComponent::Client_BeginLoadingInventoryData_Implementation()
+{
+	ClientInventorySaveData.NetId = NetId;
+	ClientInventorySaveData.PlatformId = PlatformId;
+
+	SaveState = ESaveState::ESave_Pending;
+	ClientInventorySaveData.InventoryItems.Empty();
+}
+void UInventoryComponent::Client_LoadSomeInventoryData_Implementation(const TArray<FS_Item>& Items)
+{
+	// Retrieve some of the items that were sent from the server
+	for (FS_Item Item : Items)
+	{
+		ClientInventorySaveData.InventoryItems.Add(Item);
+	}
+}
+void UInventoryComponent::Client_LoadSaveDataCompleted_Implementation()
+{
+	// Update the CurrentInventorySaveData value in preparation for when the inventory is updated
+	CurrentInventorySaveData = ClientInventorySaveData;
+	SaveState = ESaveState::ESave_SaveReady;
+
+	// Clear out the pending values
+	ClientInventorySaveData.NetId = NetId;
+	ClientInventorySaveData.PlatformId = PlatformId;
+	ClientInventorySaveData.InventoryItems.Empty();
+}
+
+
+bool UInventoryComponent::UpdateInventoryInformation(const F_InventorySaveInformation& SaveInformation)
+{
+	bool bSuccessfullySavedInventory = true;
+	if (SaveInformation.InventoryItems.IsEmpty()) return false;
+
+	if (bDebugSaveInformation)
+	{
+		UE_LOGFMT(InventoryLog, Warning, "{0} {1}() Loading the [{2}][{3}]'s inventory from saved information.",
+			*UEnum::GetValueAsString(Character->GetLocalRole()), *FString(__FUNCTION__), NetId, PlatformId
+		);
+		ListSavedInventory(SaveInformation);
+	}
+	
+	for (const FS_Item SavedItem : SaveInformation.InventoryItems)
+	{
+		F_Item Item;
+		Execute_GetDataBaseItem(this, SavedItem.ItemName, Item);
+
+		if (Item.IsValid())
+		{
+			TMap<FGuid, F_Item>& InventoryList = GetInventoryList(Item.ItemType);
+			InventoryList.Add(Item.GetId(), Item);
+		}
+		else bSuccessfullySavedInventory = false;
+	}
+
+	if (bDebugSaveInformation)
+	{
+		UE_LOGFMT(InventoryLog, Warning, "{0} {1}() Loaded [{2}][{3}]'s inventory information.",
+			*UEnum::GetValueAsString(Character->GetLocalRole()), *FString(__FUNCTION__), NetId, PlatformId
+		);
+		ListInventory();
+	}
+
+	// Let the client know the save information has been completed
+	OnLoadSaveData.Broadcast(bSuccessfullySavedInventory);
+	return bSuccessfullySavedInventory;
+}
+
+
+void UInventoryComponent::UpdateInventoryAfterRetrievingSaveInformation()
+{
+	// if (bCharacterReady && PlayerState && PlayerState->GetSaveState() == ESaveState::ESave_SaveReady) SaveInformation();
+	
+	if (SaveState == ESaveState::ESave_SaveReady)
+	{
+		SaveState = ESaveState::ESave_Saved;
+		UpdateInventoryInformation(CurrentInventorySaveData);
+	}
+}
+
+
+FS_Item UInventoryComponent::CreateSavedItem(const F_Item& Item) const
+{
+	if (!Item.IsValid()) return FS_Item();
+	return FS_Item(Item.Id, Item.ItemName, Item.SortOrder);
+}
+#pragma endregion 
+
+
+
 #pragma region Utility
 F_Item UInventoryComponent::InternalGetInventoryItem_Implementation(const FGuid& Id, EItemType InventorySectionToSearch)
 {
@@ -643,81 +802,14 @@ F_Item* UInventoryComponent::CreateInventoryObject() const
 	return new F_Item();
 }
 
-
-F_InventorySaveInformation UInventoryComponent::SaveInventoryInformation()
+ESaveState UInventoryComponent::GetSaveState()
 {
-	TArray<FS_Item> InventoryItems;
-
-	if (!QuestItems.IsEmpty()) for (auto &[Id, Item] : QuestItems) InventoryItems.Add(CreateSavedItem(Item));
-	if (!CommonItems.IsEmpty()) for (auto &[Id, Item] : CommonItems) InventoryItems.Add(CreateSavedItem(Item));
-	if (!Weapons.IsEmpty()) for (auto &[Id, Item] : Weapons) InventoryItems.Add(CreateSavedItem(Item));
-	if (!Armors.IsEmpty()) for (auto &[Id, Item] : Armors) InventoryItems.Add(CreateSavedItem(Item));
-	if (!Materials.IsEmpty()) for (auto &[Id, Item] : Materials) InventoryItems.Add(CreateSavedItem(Item));
-	if (!Notes.IsEmpty()) for (auto &[Id, Item] : Notes) InventoryItems.Add(CreateSavedItem(Item));
-	
-	F_InventorySaveInformation SaveInformation;
-	SaveInformation.InventoryItems = InventoryItems;
-
-	return SaveInformation;
-
-	/*
-		UPlayerSaveInformation* SaveInformation = NewObject<UPlayerSaveInformation>();
-		if (SaveInformation)
-		{
-			SaveInformation->CharacterInformation = SaveData;
-			UGameplayStatics::SaveGameToSlot(SaveInformation, SaveData.PlatformId, SaveData.NetId);
-			OnSaveData.Broadcast();
-		}
-
-		FString SlotName = SaveData.PlatformId; // + SaveData.NetId;
-		UPlayerSaveInformation* SaveInformation = Cast<UPlayerSaveInformation>(UGameplayStatics::LoadGameFromSlot(SaveData.PlatformId, SaveData.NetId));
-		if (SaveInformation) SaveData = SaveInformation->CharacterInformation;
-	*/
+	return SaveState;
 }
 
-
-FS_Item UInventoryComponent::CreateSavedItem(const F_Item& Item) const
+void UInventoryComponent::SetSaveState(const ESaveState State)
 {
-	if (!Item.IsValid()) return FS_Item();
-	return FS_Item(Item.Id, Item.ItemName, Item.SortOrder);
-}
-
-
-bool UInventoryComponent::LoadInventoryInformation(const F_InventorySaveInformation& SaveInformation)
-{
-	bool bSuccessfullySavedInventory = true;
-	if (SaveInformation.InventoryItems.IsEmpty()) return false;
-
-	if (bDebugSaveInformation)
-	{
-		UE_LOGFMT(InventoryLog, Warning, "{0} {1}() Loading the [{2}][{3}]'s inventory from saved information.",
-			*UEnum::GetValueAsString(Character->GetLocalRole()), *FString(__FUNCTION__), NetId, PlatformId
-		);
-		ListSavedInventory(SaveInformation);
-	}
-	
-	for (const FS_Item SavedItem : SaveInformation.InventoryItems)
-	{
-		F_Item Item;
-		Execute_GetDataBaseItem(this, SavedItem.ItemName, Item);
-
-		if (Item.IsValid())
-		{
-			TMap<FGuid, F_Item>& InventoryList = GetInventoryList(Item.ItemType);
-			InventoryList.Add(Item.GetId(), Item);
-		}
-		else bSuccessfullySavedInventory = false;
-	}
-
-	if (bDebugSaveInformation)
-	{
-		UE_LOGFMT(InventoryLog, Warning, "{0} {1}() Loaded [{2}][{3}]'s inventory information.",
-			*UEnum::GetValueAsString(Character->GetLocalRole()), *FString(__FUNCTION__), NetId, PlatformId
-		);
-		ListInventory();
-	}
-
-	return bSuccessfullySavedInventory;
+	SaveState = State;
 }
 
 
