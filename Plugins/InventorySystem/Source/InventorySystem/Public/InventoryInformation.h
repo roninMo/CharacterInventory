@@ -6,9 +6,10 @@
 #include "Engine/DataTable.h"
 #include "InventoryInformation.generated.h"
 
+class AItemBase;
 class IInventoryItemInterface;
 class UItemGlobals;
-class ABaseItem;
+class AItemBase;
 
 
 /**
@@ -103,7 +104,7 @@ struct F_Item
 			const EItemType ItemType = EItemType::Inv_None,
 
 			const TSubclassOf<UObject> ActualClass = nullptr,
-			const TSubclassOf<AActor> WorldClass = nullptr,
+			const TSubclassOf<AItemBase> WorldClass = nullptr,
 			UDataAsset* GlobalInformation = nullptr
 		) :
 	
@@ -153,7 +154,7 @@ public:
 	 * @remarks This should reference the inventory interface or use the ItemBase class
 	 * 
 	 */	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) TSubclassOf<AActor> WorldClass;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) TSubclassOf<AItemBase> WorldClass;
 	
 	/** Global data for items that's added to the object from the blueprint */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) UDataAsset* GlobalInformation;

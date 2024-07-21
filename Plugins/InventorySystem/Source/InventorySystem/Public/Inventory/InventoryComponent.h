@@ -23,8 +23,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInventoryAdditionSuccessDelegate, 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FInventoryItemTransferFailureDelegate, const FGuid&, Id, const TScriptInterface<IInventoryInterface>, OtherInventory, const bool, bFromThisInventory);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FInventoryItemTransferSuccessDelegate, const FGuid&, Id, const TScriptInterface<IInventoryInterface>, OtherInventory, const bool, bFromThisInventory);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInventoryItemRemovalFailureDelegate, const FGuid&, Id, TScriptInterface<IInventoryItemInterface>, SpawnedItem);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInventoryItemRemovalSuccessDelegate, const F_Item&, ItemData, TScriptInterface<IInventoryItemInterface>, SpawnedItem);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInventoryItemRemovalFailureDelegate, const FGuid&, Id, UObject*, SpawnedItem);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInventoryItemRemovalSuccessDelegate, const F_Item&, ItemData, UObject*, SpawnedItem);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLoadSaveDataInventoryDelegate, bool, bSuccessfullySavedInventory);
 
@@ -47,8 +47,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) UDataTable* ItemDatabase;
 
 	/** References and stored information */
+	/** The client's Net Id */
 	UPROPERTY(BlueprintReadWrite) int32 NetId;
+
+	/** The Id of the current machine of the player  */
 	UPROPERTY(BlueprintReadWrite) FString PlatformId;
+
+	/** A reference to the character */
 	UPROPERTY(BlueprintReadWrite) TObjectPtr<ACharacter> Character;
 
 	/** Other */
@@ -60,7 +65,7 @@ protected:
 protected:
 	UInventoryComponent();
 	virtual void BeginPlay() override;
-	// Saving the inventory information should be handled in the player state!
+	// Loading / Saving the inventory information should be handled in the player state!
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	
@@ -304,8 +309,8 @@ protected:
 	
 	
 public:
-	/** Saves the player's inventory and returns the inventory information */
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Saving and Loading") virtual F_InventorySaveInformation SaveInventoryInformation();
+	/** Returns the player's inventory information for saving */
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Saving and Loading") virtual F_InventorySaveInformation GetInventorySaveInformation();
 
 	/**
 	 * Loads the player's inventory on both the server and client from a list of saved inventory items. 
@@ -420,9 +425,9 @@ protected:
 protected:
 	/** Listing inventory information -> @ref ListInventory, ListSavedCharacterInformation  */
 	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Listing") virtual void ListInventory();
-	UFUNCTION(Server, Reliable, Category = "Inventory|Utilities|Listing") virtual void Server_ListInventory(const TArray<FGuid>& ItemList);
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Listing") virtual void ListInventoryMap(const TMap<FGuid, F_Item>& Map, const TArray<FGuid>& ClientItems, FString ListName);
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Listing") virtual void ListInventoryItem(const F_Item& Item, bool bClientContainsItem);
+	UFUNCTION(Server, Reliable, Category = "Inventory|Utilities|Listing") virtual void Server_ListInventory(const TArray<FS_Item>& ClientItemList, bool bCalledFromServer);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Listing") virtual void ListInventoryMap(const TMap<FGuid, F_Item>& Map, FString ListName);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Listing") virtual void ListInventoryItem(const F_Item& Item);
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Listing") virtual void ListSavedItem(const FS_Item& SavedItem);
 	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Listing") virtual void ListSavedItems(const TArray<FS_Item>& List, FString ListName);

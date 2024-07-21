@@ -8,7 +8,6 @@
 #include "InventoryInterface.generated.h"
 
 class IInventoryItemInterface;
-class ABaseItem;
 
 
 // This class does not need to be modified.

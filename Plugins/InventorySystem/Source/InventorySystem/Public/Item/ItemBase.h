@@ -17,7 +17,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Data Configuration") UDataTable* ItemInformationTable;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Data Configuration") UDataAsset* GlobalItemInformation;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Data Configuration") FName TableId;
-	UPROPERTY(BlueprintReadWrite, Category = "Item|Information") F_Item Item;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Replicated, Category = "Item|Information") F_Item Item;
 	
 	/**
 	 * Set to true if a player has accessed this item and is performing some action that should prevent other players from doing the same thing
@@ -29,7 +29,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Debugging") bool bDebugItemRetrieval;
 
 	
-public:	
+public:
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	AItemBase();
 
 	/** Function for dynamically adding default information to inventory items */

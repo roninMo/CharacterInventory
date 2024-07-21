@@ -5,6 +5,7 @@
 
 #include "Inventory/InventoryComponent.h"
 #include "Logging/StructuredLog.h"
+#include "Net/UnrealNetwork.h"
 
 // Sets default values
 AItemBase::AItemBase()
@@ -32,6 +33,13 @@ AItemBase::AItemBase()
 }
 
 
+void AItemBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME_CONDITION(AItemBase, Item, COND_InitialOrOwner);
+}
+
+
 void AItemBase::InitializeItemGlobals()
 {
 	// Ex item globals function.
@@ -48,16 +56,13 @@ void AItemBase::BeginPlay()
 	Super::BeginPlay();
 	InitializeItemGlobals();
 
-	if (ItemInformationTable && !Item.IsValid())
-	{
-		RetrieveItemFromDataTable(TableId, Item);
-	}
-	if (ItemInformationTable && !Item.IsValid())
-	{
-		UE_LOG(LogTemp, Error, TEXT("%s() %s: item information data table, set this up in the blueprint!"), *FString(__FUNCTION__), *GetName());
-	}
+	// Handle this during spawn
+	// if (ItemInformationTable && !Item.IsValid())
+	// {
+	// 	RetrieveItemFromDataTable(TableId, Item);
+	// }
 	
-	CreateIdIfNull();
+	// CreateIdIfNull();
 }
 
 

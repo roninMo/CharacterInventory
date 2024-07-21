@@ -16,8 +16,8 @@ DEFINE_LOG_CATEGORY(InventoryLog);
 UInventoryComponent::UInventoryComponent()
 {
 	PrimaryComponentTick.TickGroup = TG_DuringPhysics;
-	PrimaryComponentTick.bCanEverTick = false;
-	PrimaryComponentTick.bStartWithTickEnabled = false;
+	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bStartWithTickEnabled = true;
 	SetIsReplicatedByDefault(true);
 }
 
@@ -113,9 +113,8 @@ void UInventoryComponent::Server_TryAddItem_Implementation(const FGuid& Id, cons
 
 F_Item UInventoryComponent::HandleAddItem_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type)
 {
-	const TScriptInterface<IInventoryItemInterface> InventoryInterface = InventoryItemInterface;
-	
 	F_Item Item = *CreateInventoryObject();
+	const TScriptInterface<IInventoryItemInterface> InventoryInterface = InventoryItemInterface;
 	if (InventoryInterface.GetInterface()) Item = InventoryInterface->Execute_GetItem(InventoryInterface.GetObject());
 	if (!Item.IsValid())
 	{
@@ -142,12 +141,11 @@ F_Item UInventoryComponent::HandleAddItem_Implementation(const FGuid& Id, const 
 
 void UInventoryComponent::Client_AddItemResponse_Implementation(const bool bSuccess, const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type)
 {
-	const TScriptInterface<IInventoryItemInterface> InventoryInterface = InventoryItemInterface;
-	
+	const TScriptInterface<IInventoryItemInterface> InventoryItem = InventoryItemInterface;
 	if (!bSuccess)
 	{
 		Execute_HandleItemAdditionFail(this, Id, DatabaseId, InventoryItemInterface, Type);
-		OnInventoryItemAdditionFailure.Broadcast(Id, DatabaseId, InventoryInterface);
+		OnInventoryItemAdditionFailure.Broadcast(Id, DatabaseId, InventoryItem);
 	}
 	else
 	{
@@ -162,7 +160,7 @@ void UInventoryComponent::Client_AddItemResponse_Implementation(const bool bSucc
 		}
 		
 		Execute_HandleItemAdditionSuccess(this, Item.Id, Item.ItemName, InventoryItemInterface, Type);
-		OnInventoryItemAdditionSuccess.Broadcast(Item, InventoryInterface);
+		OnInventoryItemAdditionSuccess.Broadcast(Item, InventoryItem);
 	}
 	
 	if (bDebugInventory_Client)
@@ -487,12 +485,10 @@ bool UInventoryComponent::HandleRemoveItem_Implementation(const FGuid& Id, const
 
 void UInventoryComponent::Client_RemoveItemResponse_Implementation(const bool bSuccess, const FGuid& Id, const FName DatabaseId, const EItemType Type, const bool bDropItem, UObject* SpawnedItem)
 {
-	const TScriptInterface<IInventoryItemInterface> SpawnedItemInterface = SpawnedItem;
-	
 	if (!bSuccess)
 	{
 		Execute_HandleRemoveItemFail(this, Id, Type, bDropItem, SpawnedItem);
-		OnInventoryItemRemovalFailure.Broadcast(Id, SpawnedItemInterface);
+		OnInventoryItemRemovalFailure.Broadcast(Id, SpawnedItem);
 	}
 	else
 	{
@@ -502,7 +498,7 @@ void UInventoryComponent::Client_RemoveItemResponse_Implementation(const bool bS
 		}
 		
 		Execute_HandleRemoveItemSuccess(this, Id, Type, bDropItem, SpawnedItem);
-		OnInventoryItemRemovalSuccess.Broadcast(Id, SpawnedItemInterface);
+		OnInventoryItemRemovalSuccess.Broadcast(Id, SpawnedItem);
 	}
 	
 	if (bDebugInventory_Client)
@@ -539,7 +535,7 @@ void UInventoryComponent::HandleRemoveItemSuccess_Implementation(const FGuid& Id
 
 
 #pragma region Saving and Loading
-F_InventorySaveInformation UInventoryComponent::SaveInventoryInformation()
+F_InventorySaveInformation UInventoryComponent::GetInventorySaveInformation()
 {
 	/*
 		UPlayerSaveInformation* SaveInformation = NewObject<UPlayerSaveInformation>();
@@ -578,24 +574,31 @@ void UInventoryComponent::LoadInventoryInformation(const F_InventorySaveInformat
 	{
 		UE_LOGFMT(InventoryLog, Warning, "{0} {1}() Loading the [{2}][{3}]'s inventory from saved information.",
 			*UEnum::GetValueAsString(Character->GetLocalRole()), *FString(__FUNCTION__), NetId, PlatformId
-		);
+			);
 		ListSavedInventory(SaveInformation);
 	}
 	
+	// Server logic
+	CurrentInventorySaveData = SaveInformation;
+	SaveState = ESaveState::ESave_SaveReady;
+
+	// Client logic
+	Client_BeginLoadingInventoryData();
+	
 	// Load inventory items @note We might get errors if we send over everything altogether, so this is divided into multiple functions
-	TArray<FS_Item> InventoryItems;
+	TArray<FS_Item> SavedItems;
 	for (int i = 0; i < SaveInformation.InventoryItems.Num(); i++)
 	{
-		InventoryItems.Add(SaveInformation.InventoryItems[i]);
-		if (InventoryItems.Num() >= 45)
+		SavedItems.Add(SaveInformation.InventoryItems[i]);
+		if (SavedItems.Num() >= 45)
 		{
-			Client_LoadSomeInventoryData(InventoryItems);
-			InventoryItems.Empty();
+			Client_LoadSomeInventoryData(SavedItems);
+			SavedItems.Empty();
 		}
 	}
-	if (!InventoryItems.IsEmpty())
+	if (!SavedItems.IsEmpty())
 	{
-		Client_LoadSomeInventoryData(InventoryItems);
+		Client_LoadSomeInventoryData(SavedItems);
 	}
 	
 	Client_LoadSaveDataCompleted();
@@ -620,6 +623,8 @@ void UInventoryComponent::Client_LoadSomeInventoryData_Implementation(const TArr
 }
 void UInventoryComponent::Client_LoadSaveDataCompleted_Implementation()
 {
+	if (GetCharacter()) UE_LOGFMT(InventoryLog, Warning, "LoadSaveData finished on the {0}, inventory items: {1}", *UEnum::GetValueAsString(Character->GetLocalRole()), ClientInventorySaveData.InventoryItems.Num());
+	
 	// Update the CurrentInventorySaveData value in preparation for when the inventory is updated
 	CurrentInventorySaveData = ClientInventorySaveData;
 	SaveState = ESaveState::ESave_SaveReady;
@@ -638,16 +643,19 @@ bool UInventoryComponent::UpdateInventoryInformation(const F_InventorySaveInform
 
 	if (bDebugSaveInformation)
 	{
-		UE_LOGFMT(InventoryLog, Warning, "{0} {1}() Loading the [{2}][{3}]'s inventory from saved information.",
+		UE_LOGFMT(InventoryLog, Warning, "{0} {1}() Loading [{2}][{3}]'s inventory from saved information.",
 			*UEnum::GetValueAsString(Character->GetLocalRole()), *FString(__FUNCTION__), NetId, PlatformId
 		);
-		ListSavedInventory(SaveInformation);
 	}
 	
 	for (const FS_Item SavedItem : SaveInformation.InventoryItems)
 	{
 		F_Item Item;
 		Execute_GetDataBaseItem(this, SavedItem.ItemName, Item);
+
+		// Update the item information with saved item's information
+		Item.Id = SavedItem.Id;
+		Item.SortOrder = SavedItem.SortOrder;
 
 		if (Item.IsValid())
 		{
@@ -659,10 +667,11 @@ bool UInventoryComponent::UpdateInventoryInformation(const F_InventorySaveInform
 
 	if (bDebugSaveInformation)
 	{
-		UE_LOGFMT(InventoryLog, Warning, "{0} {1}() Loaded [{2}][{3}]'s inventory information.",
+		UE_LOGFMT(InventoryLog, Warning, "{0} {1}() Loading done, here's [{2}][{3}]'s inventory information.",
 			*UEnum::GetValueAsString(Character->GetLocalRole()), *FString(__FUNCTION__), NetId, PlatformId
 		);
 		ListInventory();
+		
 	}
 
 	// Let the client know the save information has been completed
@@ -674,7 +683,6 @@ bool UInventoryComponent::UpdateInventoryInformation(const F_InventorySaveInform
 void UInventoryComponent::UpdateInventoryAfterRetrievingSaveInformation()
 {
 	// if (bCharacterReady && PlayerState && PlayerState->GetSaveState() == ESaveState::ESave_SaveReady) SaveInformation();
-	
 	if (SaveState == ESaveState::ESave_SaveReady)
 	{
 		SaveState = ESaveState::ESave_Saved;
@@ -845,7 +853,6 @@ TScriptInterface<IInventoryItemInterface> UInventoryComponent::SpawnWorldItem_Im
 			const TScriptInterface<IInventoryItemInterface> WorldItem = SpawnedItem;
 			SpawnedItem->Execute_SetItemInformationDatabase(SpawnedItem, ItemDatabase);
 			SpawnedItem->Execute_SetItem(SpawnedItem, Item);
-			SpawnedItem->Execute_SetId(SpawnedItem, Item.Id); // Persist the unique id of this inventory object
 			return WorldItem;
 		}
 		else
@@ -911,40 +918,88 @@ void UInventoryComponent::ListInventory()
 {
 	if (!GetCharacter()) return;
 	
-	TArray<FGuid> ClientItems;
-	for (auto &[Id, Item] : QuestItems) ClientItems.Add(Id);
-	for (auto &[Id, Item] : CommonItems) ClientItems.Add(Id);
-	for (auto &[Id, Item] : Weapons) ClientItems.Add(Id);
-	for (auto &[Id, Item] : Armors) ClientItems.Add(Id);
-	for (auto &[Id, Item] : Materials) ClientItems.Add(Id);
-	for (auto &[Id, Item] : Notes) ClientItems.Add(Id);
-	Server_ListInventory(ClientItems);
+	TArray<FS_Item> ClientItems; // Used for capturing both the id and the database id
+	for (auto &[Id, Item] : QuestItems) ClientItems.Add(FS_Item(Id, Item.ItemName));
+	for (auto &[Id, Item] : CommonItems) ClientItems.Add(FS_Item(Id, Item.ItemName));
+	for (auto &[Id, Item] : Weapons) ClientItems.Add(FS_Item(Id, Item.ItemName));
+	for (auto &[Id, Item] : Armors) ClientItems.Add(FS_Item(Id, Item.ItemName));
+	for (auto &[Id, Item] : Materials) ClientItems.Add(FS_Item(Id, Item.ItemName));
+	for (auto &[Id, Item] : Notes) ClientItems.Add(FS_Item(Id, Item.ItemName));
+	Server_ListInventory(ClientItems, Character->HasAuthority());
 }
 
 
-void UInventoryComponent::Server_ListInventory_Implementation(const TArray<FGuid>& ItemList)
+void UInventoryComponent::Server_ListInventory_Implementation(const TArray<FS_Item>& ClientItemList, bool bCalledFromServer)
 {
 	if (!GetCharacter()) return;
+
+	// Save the client and server information to check that everything is being added correctly
+	TMap<FGuid, FName> ServerInventoryList;
+	TMap<FGuid, FName> ClientInventoryList;
+	for (FS_Item Item : ClientItemList)
+	{
+		ClientInventoryList.Add(Item.Id, Item.ItemName);
+	}
 	
 	UE_LOGFMT(InventoryLog, Log, " ");
 	UE_LOGFMT(InventoryLog, Log, "//----------------------------------------------------------------------------------------------------------------------------------/");
-	UE_LOGFMT(InventoryLog, Log, "// {0}: [{1}][{2}] {3}'s Inventory", *UEnum::GetValueAsString(Character->GetLocalRole()), NetId, PlatformId, *GetNameSafe(Character));
+	UE_LOGFMT(InventoryLog, Log, "// {0}::Inventory() [{1}][{2}] {3}'s Inventory", bCalledFromServer ? "Server" : "Client", NetId, PlatformId, *GetNameSafe(Character));
 	UE_LOGFMT(InventoryLog, Log, "//----------------------------------------------------------------------------------------------------------------------------------/");
-
-	const TArray<FGuid> ClientItems = ItemList;
-	if (!Weapons.IsEmpty()) ListInventoryMap(Weapons, ClientItems, FString("Armaments"));
-	if (!Armors.IsEmpty()) ListInventoryMap(Armors, ClientItems, FString("Armors"));
-	if (!CommonItems.IsEmpty()) ListInventoryMap(CommonItems, ClientItems, FString("Common Items"));
-	if (!QuestItems.IsEmpty()) ListInventoryMap(QuestItems, ClientItems, FString("Quest Items"));
-	if (!Materials.IsEmpty()) ListInventoryMap(Materials, ClientItems, FString("Materials"));
-	if (!Notes.IsEmpty()) ListInventoryMap(Notes, ClientItems, FString("Notes"));
+	
+	// List the server's inventory values
+	if (!Weapons.IsEmpty()) 
+	{
+		ListInventoryMap(Weapons, FString("Armaments"));
+		for (auto &[Id, Item] : Weapons) ServerInventoryList.Add(Id, Item.ItemName); 
+	}
+	if (!Armors.IsEmpty()) 
+	{
+		ListInventoryMap(Armors, FString("Armors"));
+		for (auto &[Id, Item] : Armors) ServerInventoryList.Add(Id, Item.ItemName); 
+	}
+	if (!CommonItems.IsEmpty()) 
+	{
+		ListInventoryMap(CommonItems, FString("Common Items"));
+		for (auto &[Id, Item] : CommonItems) ServerInventoryList.Add(Id, Item.ItemName); 
+	}
+	if (!QuestItems.IsEmpty()) 
+	{
+		ListInventoryMap(QuestItems, FString("Quest Items"));
+		for (auto &[Id, Item] : QuestItems) ServerInventoryList.Add(Id, Item.ItemName); 
+	}
+	if (!Materials.IsEmpty()) 
+	{
+		ListInventoryMap(Materials, FString("Materials"));
+		for (auto &[Id, Item] : Materials) ServerInventoryList.Add(Id, Item.ItemName); 
+	}
+	if (!Notes.IsEmpty()) 
+	{
+		ListInventoryMap(Notes, FString("Notes"));
+		for (auto &[Id, Item] : Notes) ServerInventoryList.Add(Id, Item.ItemName); 
+	}
+	
+	// List the inventory items on client and server
+	TMap<FGuid, FName> AllInventoryItems = ServerInventoryList;
+	UE_LOGFMT(InventoryLog, Log, "|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
+	UE_LOGFMT(InventoryLog, Log, "| Id                                 | OnServer | OnClient | Display Name ");
+	UE_LOGFMT(InventoryLog, Log, "|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
+	for (auto &[Id, ItemName, i] : ClientItemList) if (!AllInventoryItems.Contains(Id)) AllInventoryItems.Add(Id, ItemName);
+	for (auto &[Id, ItemName] : AllInventoryItems)
+	{
+		UE_LOGFMT(InventoryLog, Log, "|  {0}  |   {1}  |   {2}  | {3}",
+			*Id.ToString(),
+			ServerInventoryList.Contains(Id) ? "true " : "false",
+			!bCalledFromServer ? ClientInventoryList.Contains(Id) ? "true " : "false" : "n/a  ",
+			ItemName
+		);
+	}
 	
 	UE_LOGFMT(InventoryLog, Log, "//----------------------------------------------------------------------------------------------------------------------------------//");
 	UE_LOGFMT(InventoryLog, Log, " ");
 }
 
 
-void UInventoryComponent::ListInventoryMap(const TMap<FGuid, F_Item>& Map, const TArray<FGuid>& ClientItems, FString ListName)
+void UInventoryComponent::ListInventoryMap(const TMap<FGuid, F_Item>& Map, FString ListName)
 {
 	if (!GetCharacter()) return;
 
@@ -953,11 +1008,11 @@ void UInventoryComponent::ListInventoryMap(const TMap<FGuid, F_Item>& Map, const
 	UE_LOGFMT(InventoryLog, Log, "// {0} ", ListName);
 	UE_LOGFMT(InventoryLog, Log, "//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
 	UE_LOGFMT(InventoryLog, Log, " ");
-	for (auto &[Id, Item] : Map) ListInventoryItem(Item, ClientItems.Contains(Id));
+	for (auto &[Id, Item] : Map) ListInventoryItem(Item);
 }
 
 
-void UInventoryComponent::ListInventoryItem(const F_Item& Item, bool bClientContainsItem)
+void UInventoryComponent::ListInventoryItem(const F_Item& Item)
 {
 	if (!GetCharacter() || !Item.IsValid())
 	{
@@ -966,7 +1021,7 @@ void UInventoryComponent::ListInventoryItem(const F_Item& Item, bool bClientCont
 	}
 
 	UE_LOGFMT(InventoryLog, Log, "|--------------------------------------------------/");
-	UE_LOGFMT(InventoryLog, Log, "| ({0}) {1}, OnClient: {2}", Item.SortOrder, *Item.DisplayName, bClientContainsItem);
+	UE_LOGFMT(InventoryLog, Log, "| ({0}) {1}", Item.SortOrder, *Item.DisplayName);
 	UE_LOGFMT(InventoryLog, Log, "|-------------------------------------------------/");
 	UE_LOGFMT(InventoryLog, Log, "| Id: {0} ->  {1}", Item.ItemName, *Item.Id.ToString());
 	UE_LOGFMT(InventoryLog, Log, "| Type: {0}", *UEnum::GetValueAsString(Item.ItemType));
@@ -984,12 +1039,11 @@ void UInventoryComponent::ListInventoryItem(const F_Item& Item, bool bClientCont
 void UInventoryComponent::ListSavedInventory(const F_InventorySaveInformation& Data)
 {
 	if (!GetCharacter()) return;
-	UE_LOGFMT(InventoryLog, Log, " ");
-	UE_LOGFMT(InventoryLog, Log, "//----------------------------------------------------------------------------------------------------------------------------------/");
-	UE_LOGFMT(InventoryLog, Log, "// {0}: [{1}][{2}] {3}'s Inventory", *UEnum::GetValueAsString(Character->GetLocalRole()), NetId, PlatformId, *GetNameSafe(Character));
-	UE_LOGFMT(InventoryLog, Log, "//----------------------------------------------------------------------------------------------------------------------------------/");
+	UE_LOGFMT(InventoryLog, Log, "////~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
+	UE_LOGFMT(InventoryLog, Log, "// {0}::SavedInventory() [{1}][{2}] {3}'s Inventory", *UEnum::GetValueAsString(Character->GetLocalRole()), NetId, PlatformId, *GetNameSafe(Character));
+	UE_LOGFMT(InventoryLog, Log, "////~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
 	ListSavedItems(Data.InventoryItems, "Saved Items");
-	UE_LOGFMT(InventoryLog, Log, "//----------------------------------------------------------------------------------------------------------------------------------//");
+	UE_LOGFMT(InventoryLog, Log, "//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//");
 	UE_LOGFMT(InventoryLog, Log, " ");
 }
 
@@ -997,12 +1051,6 @@ void UInventoryComponent::ListSavedInventory(const F_InventorySaveInformation& D
 void UInventoryComponent::ListSavedItems(const TArray<FS_Item>& List, FString ListName)
 {
 	if (!GetCharacter()) return;
-
-	UE_LOGFMT(InventoryLog, Log, " ");
-	UE_LOGFMT(InventoryLog, Log, "//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
-	UE_LOGFMT(InventoryLog, Log, "// {0} ", ListName);
-	UE_LOGFMT(InventoryLog, Log, "//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
-	UE_LOGFMT(InventoryLog, Log, " ");
 	for (FS_Item SavedItem : List)
 	{
 		ListSavedItem(SavedItem);
