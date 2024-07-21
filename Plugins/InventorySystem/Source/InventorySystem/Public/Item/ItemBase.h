@@ -8,7 +8,7 @@
 #include "ItemBase.generated.h"
 
 UCLASS( Blueprintable, ClassGroup=(Inventory) )
-class CHARACTERINVENTORY_API AItemBase : public AActor, public IInventoryItemInterface
+class INVENTORYSYSTEM_API AItemBase : public AActor, public IInventoryItemInterface
 {
 	GENERATED_BODY()
 	

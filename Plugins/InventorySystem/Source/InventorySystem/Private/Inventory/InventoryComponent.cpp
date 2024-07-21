@@ -644,6 +644,83 @@ F_Item* UInventoryComponent::CreateInventoryObject() const
 }
 
 
+F_InventorySaveInformation UInventoryComponent::SaveInventoryInformation()
+{
+	TArray<FS_Item> InventoryItems;
+
+	if (!QuestItems.IsEmpty()) for (auto &[Id, Item] : QuestItems) InventoryItems.Add(CreateSavedItem(Item));
+	if (!CommonItems.IsEmpty()) for (auto &[Id, Item] : CommonItems) InventoryItems.Add(CreateSavedItem(Item));
+	if (!Weapons.IsEmpty()) for (auto &[Id, Item] : Weapons) InventoryItems.Add(CreateSavedItem(Item));
+	if (!Armors.IsEmpty()) for (auto &[Id, Item] : Armors) InventoryItems.Add(CreateSavedItem(Item));
+	if (!Materials.IsEmpty()) for (auto &[Id, Item] : Materials) InventoryItems.Add(CreateSavedItem(Item));
+	if (!Notes.IsEmpty()) for (auto &[Id, Item] : Notes) InventoryItems.Add(CreateSavedItem(Item));
+	
+	F_InventorySaveInformation SaveInformation;
+	SaveInformation.InventoryItems = InventoryItems;
+
+	return SaveInformation;
+
+	/*
+		UPlayerSaveInformation* SaveInformation = NewObject<UPlayerSaveInformation>();
+		if (SaveInformation)
+		{
+			SaveInformation->CharacterInformation = SaveData;
+			UGameplayStatics::SaveGameToSlot(SaveInformation, SaveData.PlatformId, SaveData.NetId);
+			OnSaveData.Broadcast();
+		}
+
+		FString SlotName = SaveData.PlatformId; // + SaveData.NetId;
+		UPlayerSaveInformation* SaveInformation = Cast<UPlayerSaveInformation>(UGameplayStatics::LoadGameFromSlot(SaveData.PlatformId, SaveData.NetId));
+		if (SaveInformation) SaveData = SaveInformation->CharacterInformation;
+	*/
+}
+
+
+FS_Item UInventoryComponent::CreateSavedItem(const F_Item& Item) const
+{
+	if (!Item.IsValid()) return FS_Item();
+	return FS_Item(Item.Id, Item.ItemName, Item.SortOrder);
+}
+
+
+bool UInventoryComponent::LoadInventoryInformation(const F_InventorySaveInformation& SaveInformation)
+{
+	bool bSuccessfullySavedInventory = true;
+	if (SaveInformation.InventoryItems.IsEmpty()) return false;
+
+	if (bDebugSaveInformation)
+	{
+		UE_LOGFMT(InventoryLog, Warning, "{0} {1}() Loading the [{2}][{3}]'s inventory from saved information.",
+			*UEnum::GetValueAsString(Character->GetLocalRole()), *FString(__FUNCTION__), NetId, PlatformId
+		);
+		ListSavedInventory(SaveInformation);
+	}
+	
+	for (const FS_Item SavedItem : SaveInformation.InventoryItems)
+	{
+		F_Item Item;
+		Execute_GetDataBaseItem(this, SavedItem.ItemName, Item);
+
+		if (Item.IsValid())
+		{
+			TMap<FGuid, F_Item>& InventoryList = GetInventoryList(Item.ItemType);
+			InventoryList.Add(Item.GetId(), Item);
+		}
+		else bSuccessfullySavedInventory = false;
+	}
+
+	if (bDebugSaveInformation)
+	{
+		UE_LOGFMT(InventoryLog, Warning, "{0} {1}() Loaded [{2}][{3}]'s inventory information.",
+			*UEnum::GetValueAsString(Character->GetLocalRole()), *FString(__FUNCTION__), NetId, PlatformId
+		);
+		ListInventory();
+	}
+
+	return bSuccessfullySavedInventory;
+}
+
+
 bool UInventoryComponent::GetCharacter()
 {
 	if (Character) return true;
@@ -812,21 +889,15 @@ void UInventoryComponent::ListInventoryItem(const F_Item& Item, bool bClientCont
 
 
 #pragma region Saved Items
-void UInventoryComponent::ListSavedCharacterInformation(const FS_CharacterInformation& Data, FString Message)
+void UInventoryComponent::ListSavedInventory(const F_InventorySaveInformation& Data)
 {
 	if (!GetCharacter()) return;
 	UE_LOGFMT(InventoryLog, Log, " ");
 	UE_LOGFMT(InventoryLog, Log, "//----------------------------------------------------------------------------------------------------------------------------------/");
 	UE_LOGFMT(InventoryLog, Log, "// {0}: [{1}][{2}] {3}'s Inventory", *UEnum::GetValueAsString(Character->GetLocalRole()), NetId, PlatformId, *GetNameSafe(Character));
 	UE_LOGFMT(InventoryLog, Log, "//----------------------------------------------------------------------------------------------------------------------------------/");
-	UE_LOGFMT(InventoryLog, Log, "NetId: {0}", Data.NetId);
-	UE_LOGFMT(InventoryLog, Log, "PlatformId: {0}", Data.PlatformId);
-	UE_LOGFMT(InventoryLog, Log, " ");
-	
 	ListSavedItems(Data.InventoryItems, "Saved Items");
 	UE_LOGFMT(InventoryLog, Log, "//----------------------------------------------------------------------------------------------------------------------------------//");
-	UE_LOGFMT(InventoryLog, Log, " ");
-	UE_LOGFMT(InventoryLog, Log, " ");
 	UE_LOGFMT(InventoryLog, Log, " ");
 }
 
@@ -855,7 +926,7 @@ void UInventoryComponent::ListSavedItem(const FS_Item& SavedItem)
 		return;
 	}
 
-	UE_LOGFMT(InventoryLog, Log, "({0}) DatabaseId: {1}, Id: {2}", SavedItem.SortOrder, SavedItem.ItemName, SavedItem.Id.ToString());
+	UE_LOGFMT(InventoryLog, Log, "({0}) {1}({2})", SavedItem.SortOrder, SavedItem.ItemName, SavedItem.Id.ToString());
 }
 #pragma endregion 
 #pragma endregion 

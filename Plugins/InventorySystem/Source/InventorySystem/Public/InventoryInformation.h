@@ -229,113 +229,34 @@ public:
 
 
 
-/**
- * Weapon information like levels and any other values that are edited or differentiate from when this was created
- */
-USTRUCT(BlueprintType)
-struct FS_WeaponInformation
-{
-	GENERATED_USTRUCT_BODY()
-		FS_WeaponInformation(
-			const FGuid& Id = FGuid(),
-			const int32 Level = 0
-		) :
-		Id(Id),
-		Level(Level)
-	{}
-
-public:
-	virtual ~FS_WeaponInformation() {}
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) FGuid Id;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 Level;
-};
-
-
 
 
 /**
- * The save information pertaining to the character
+ * The character's saved inventory information
  */
 USTRUCT(BlueprintType)
-struct FS_CharacterInformation
+struct F_InventorySaveInformation
 {
 	GENERATED_USTRUCT_BODY()
-		FS_CharacterInformation(
+		F_InventorySaveInformation(
 			const int32 NetId = 0,
 			const FString& PlatformId = FString(),
-			const TArray<FS_Item>& InventoryItems = {},
-			const TArray<FS_WeaponInformation>& WeaponInformation = {}
-			
-			// const uint8 CurrentlyEquippedActiveWeapon = 0,
-			// const uint8 CurrentlyEquippedOffhandWeapon = 0,
-			// const TArray<FS_Item>& LeftHandWeapons = {},
-			// const TArray<FS_Item>& RightHandWeapons = {},
-			// const FS_Item& Gauntlets = FS_Item(),
-			// const FS_Item& Leggings = FS_Item(),
-			// const FS_Item& Helm = FS_Item(),
-			// const FS_Item& Chest = FS_Item(),
-			
-			// const FVector& LastLocation = FVector(),
-			// const FRotator& LastRotation = FRotator(),
-			
-			// const F_AttributeInformation& CurrentAttributeInformation = F_AttributeInformation(),
-			// const TArray<TSubclassOf<UGameplayEffect>>& CurrentStatuses = {},
-			//
-			// const ECameraStyle CameraStyle = ECameraStyle::CS_ThirdPerson,
-			// const ETPCameraOrientation CameraOrientation = ETPCameraOrientation::ETP_Center
+			const TArray<FS_Item>& InventoryItems = {}
 		) :
+	
 		NetId(NetId),
 		PlatformId(PlatformId),
-		InventoryItems(InventoryItems),
-		WeaponInformation(WeaponInformation)
-	
-		// CurrentlyEquippedActiveWeapon(CurrentlyEquippedActiveWeapon),
-		// CurrentlyEquippedOffhandWeapon(CurrentlyEquippedOffhandWeapon),
-		// LeftHandWeapons(LeftHandWeapons),
-		// RightHandWeapons(RightHandWeapons),
-		// Gauntlets(Gauntlets),
-		// Leggings(Leggings),
-		// Helm(Helm),
-		// Chest(Chest),
-	
-		// LastLocation(LastLocation),
-		// LastRotation(LastRotation),
-	
-		// CurrentAttributeInformation(CurrentAttributeInformation),
-		// CurrentStatuses(CurrentStatuses),
-	
-		// CameraStyle(CameraStyle),
-		// CameraOrientation(CameraOrientation)
+		InventoryItems(InventoryItems)
 	{}
 
 public:
-	virtual ~FS_CharacterInformation() {}
+	virtual ~F_InventorySaveInformation() {}
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 NetId;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) FString PlatformId;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<FS_Item> InventoryItems;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<FS_WeaponInformation> WeaponInformation;
-	
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite) uint8 CurrentlyEquippedActiveWeapon;
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite) uint8 CurrentlyEquippedOffhandWeapon;
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<FS_Item> LeftHandWeapons;
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<FS_Item> RightHandWeapons;
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite) FS_Item Gauntlets;
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite) FS_Item Leggings;
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite) FS_Item Helm;
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite) FS_Item Chest;
-	//
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite) FVector LastLocation;
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite) FRotator LastRotation;
-	
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite) F_AttributeInformation CurrentAttributeInformation; // Health, Mana, etc
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<TSubclassOf<UGameplayEffect>> CurrentStatuses; // Poison, buffs, etc
-	
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite) ECameraStyle CameraStyle;
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite) ETPCameraOrientation CameraOrientation;
-	
-	// Quest information and state 
-
-	
 };
+
+
+
 
 

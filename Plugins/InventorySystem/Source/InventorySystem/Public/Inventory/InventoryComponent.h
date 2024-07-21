@@ -49,6 +49,7 @@ protected:
 	UPROPERTY(BlueprintReadWrite) TObjectPtr<ACharacter> Character;
 
 	/** Other */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debugging") bool bDebugSaveInformation;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debugging") bool bDebugInventory_Client;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debugging") bool bDebugInventory_Server;
 
@@ -283,6 +284,26 @@ protected:
 	/** Delegate function for when an item is successfully added to the inventory. Helpful for ui elements to keep track of inventory updates */
 	UPROPERTY(BlueprintAssignable, Category = "Inventory|Operations") FInventoryItemRemovalSuccessDelegate OnInventoryItemRemovalSuccess;
 	
+//----------------------------------------------------------------------------------//
+// Saving																			//
+//----------------------------------------------------------------------------------//
+public:
+	/** Saves the player's inventory and returns the inventory information */
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Saving and Loading") virtual F_InventorySaveInformation SaveInventoryInformation();
+
+	
+protected:
+	/** Create a save item from an inventory item */
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Saving and Loading") virtual FS_Item CreateSavedItem(const F_Item& Item) const;
+
+	/**
+	 * Loads the player's inventory from a list of saved inventory items
+	 *
+	 * @param SaveInformation			The save information object containing the player's inventory information
+	 * @returns true if every inventory item is successfully added
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Saving and Loading") virtual bool LoadInventoryInformation(const F_InventorySaveInformation& SaveInformation);
+	
 	
 //----------------------------------------------------------------------------------//
 // Utility																			//
@@ -346,18 +367,18 @@ protected:
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 * */
 	virtual TScriptInterface<IInventoryItemInterface> SpawnWorldItem_Implementation(const F_Item& Item, const FTransform& Location) override;
-
+	
 	
 protected:
-	/** Printing inventory information -> @ref ListInventory, ListSavedCharacterInformation  */
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Printing") virtual void ListInventory();
-	UFUNCTION(Server, Reliable, Category = "Inventory|Utilities|Printing") virtual void Server_ListInventory(const TArray<FGuid>& ItemList);
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Printing") virtual void ListInventoryMap(const TMap<FGuid, F_Item>& Map, const TArray<FGuid>& ClientItems, FString ListName);
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Printing") virtual void ListInventoryItem(const F_Item& Item, bool bClientContainsItem);
+	/** Listing inventory information -> @ref ListInventory, ListSavedCharacterInformation  */
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Listing") virtual void ListInventory();
+	UFUNCTION(Server, Reliable, Category = "Inventory|Utilities|Listing") virtual void Server_ListInventory(const TArray<FGuid>& ItemList);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Listing") virtual void ListInventoryMap(const TMap<FGuid, F_Item>& Map, const TArray<FGuid>& ClientItems, FString ListName);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Listing") virtual void ListInventoryItem(const F_Item& Item, bool bClientContainsItem);
 
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Printing") virtual void ListSavedItem(const FS_Item& SavedItem);
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Printing") virtual void ListSavedItems(const TArray<FS_Item>& List, FString ListName);
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Printing") virtual void ListSavedCharacterInformation(const FS_CharacterInformation& Data, FString Message);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Listing") virtual void ListSavedItem(const FS_Item& SavedItem);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Listing") virtual void ListSavedItems(const TArray<FS_Item>& List, FString ListName);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Listing") virtual void ListSavedInventory(const F_InventorySaveInformation& Data);
 
 		
 };
