@@ -74,7 +74,7 @@ public:
 	 *			- Client_AddItemResponse
 	 *				- HandleItemAdditionFail
 	 *				- HandleItemAdditionSuccess
-	* 
+	 * 
 	 * @param DatabaseId								The id for this item in the inventory
 	 * @param InventoryItemInterface					The reference to the actor spawned in the world, if there is one (and you want it to be deleted upon completion).
 	 * @param Type										The item type (used for item allocation)
@@ -94,8 +94,9 @@ protected:
 	 * */
 	virtual void AddItemPendingClientLogic_Implementation(const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type) override;
 	
-	/** Server/Client procedure calls are not valid on interfaces, these need to be handled in the actual implementation */
+	/** Handles adding the item on the server, and sends the response to the client */
 	UFUNCTION(Server, Reliable) virtual void Server_TryAddItem(const FGuid& Id, const FName DatabaseId, UObject* InventoryInterface, const EItemType Type);
+	/** Handles the different scenarios of an AddItem operation */
 	UFUNCTION(Client, Reliable) virtual void Client_AddItemResponse(const bool bSuccess, const FGuid& Id, const FName DatabaseId, UObject* InventoryInterface, const EItemType Type);
 	
 	/**
@@ -160,8 +161,9 @@ protected:
 	 * */
 	virtual void TransferItemPendingClientLogic_Implementation(const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type) override;
 	
-	/** Server/Client procedure calls are not valid on interfaces, these need to be handled in the actual implementation */
+	/** Handles transferring the item on the server, and sends the response to the client */
 	UFUNCTION(Server, Reliable) virtual void Server_TryTransferItem(const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type);
+	/** Handles the different scenarios of an TransferItem operation */
 	UFUNCTION(Client, Reliable) virtual void Client_TransferItemResponse(const bool bSuccess, const FGuid& Id, const FName DatabaseId, UObject* OtherInventoryInterface, const EItemType Type, const bool bFromThisInventory);
 	
 	/**
@@ -182,7 +184,6 @@ protected:
 	 * @remark Client logic doesn't have any problems when invoking the handle logic on the client response functions, it's just problematic when there's multiple Clients (During a transfer)
 	 */
 	UFUNCTION(Client, Reliable) virtual void Client_HandleTransferItemForOtherInventory(const FGuid& Id, const FName DatabaseId, const EItemType Type, const bool bAddItem);
-	// TODO: Add logic to check that the client inventory is in sync with the server, otherwise there's no problem
 	
 	/**
 	 * If the item was not transferred to the other inventory 
@@ -252,8 +253,9 @@ protected:
 	 * */
 	virtual void RemoveItemPendingClientLogic_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem) override;
 	
-	/** Server/Client procedure calls are not valid on interfaces, these need to be handled in the actual implementation */
+	/** Handles removing the item on the server, and sends the response to the client */
 	UFUNCTION(Server, Reliable) void Server_TryRemoveItem(const FGuid& Id, const EItemType Type, bool bDropItem);
+	/** Handles the different scenarios of an RemoveItem operation */
 	UFUNCTION(Client, Reliable) void Client_RemoveItemResponse(const bool bSuccess, const FGuid& Id, const FName DatabaseId, const EItemType Type, bool bDropItem, UObject* SpawnedItem);
 	
 	/**

@@ -295,8 +295,8 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Utilities")
 	FString GetPlayerId() const;
 	virtual FString GetPlayerId_Implementation() const;
-
-
+	
+	
 protected:
 	/**
 	 *	Returns an item from the database
