@@ -3,6 +3,9 @@
 
 #include "Inventory/InventoryComponent.h"
 
+#include <string>
+
+#include "Engine/PackageMapClient.h"
 #include "GameFramework/Character.h"
 #include "Inventory/InventoryInterface.h"
 #include "Item/BaseItem.h"
@@ -24,7 +27,9 @@ UInventoryComponent::UInventoryComponent()
 void UInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	// Save the net and platform id for determining the character (on both server and client)
+	SetPlayerId();
 }
 
 
@@ -94,8 +99,8 @@ void UInventoryComponent::Server_TryAddItem_Implementation(const FGuid& Id, cons
 
 	if (bDebugInventory_Server)
 	{
-		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() added item {2}: {3}, databaseId: {4}, id: {5}", *UEnum::GetValueAsString(GetOwner()->GetLocalRole()),
-			*FString(__FUNCTION__), *GetNameSafe(GetOwner()), bSuccessfullyAddedItem ? "succeeded" : "failed", DatabaseId,  *Id.ToString()
+		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() added item {2}: {3} + {4}({5})", *UEnum::GetValueAsString(GetOwner()->GetLocalRole()),
+			*FString(__FUNCTION__), *Execute_GetPlayerId(this), bSuccessfullyAddedItem ? "succeeded" : "failed", DatabaseId,  *Id.ToString()
 		);
 	}
 	
@@ -118,7 +123,7 @@ F_Item UInventoryComponent::HandleAddItem_Implementation(const FGuid& Id, const 
 	if (bDebugInventory_Server || bDebugInventory_Client)
 	{
 		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() InventoryAddition: {2} + {3}({4}) ",
-			*UEnum::GetValueAsString(GetOwner()->GetLocalRole()), *FString(__FUNCTION__), *GetNameSafe(GetOwner()), DatabaseId, *Id.ToString()
+			*UEnum::GetValueAsString(GetOwner()->GetLocalRole()), *FString(__FUNCTION__), *Execute_GetPlayerId(this), DatabaseId, *Id.ToString()
 		);
 	}
 	
@@ -160,7 +165,7 @@ void UInventoryComponent::Client_AddItemResponse_Implementation(const bool bSucc
 	if (bDebugInventory_Client)
 	{
 		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() AddItemResponse: {2}, {3} add item operation ->  {4}({5}) ",
-			*UEnum::GetValueAsString(GetOwner()->GetLocalRole()), *FString(__FUNCTION__), bSuccess ? "succeeded" : "failed", *GetNameSafe(GetOwner()), DatabaseId, *Id.ToString()
+			*UEnum::GetValueAsString(GetOwner()->GetLocalRole()), *FString(__FUNCTION__), bSuccess ? "succeeded" : "failed", *Execute_GetPlayerId(this), DatabaseId, *Id.ToString()
 		);
 	}
 }
@@ -178,7 +183,7 @@ void UInventoryComponent::AddItemPendingClientLogic_Implementation(const FName D
 
 void UInventoryComponent::HandleItemAdditionFail_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type)
 {
-	// Unhide the item and add any other necessary logic and undo the ui
+	// Un hide the item and add any other necessary logic and undo the ui
 	AActor* WorldItem = Cast<AActor>(InventoryItemInterface);
 	if (WorldItem) WorldItem->SetActorHiddenInGame(false);
 	
@@ -228,19 +233,23 @@ void UInventoryComponent::Server_TryTransferItem_Implementation(const FGuid& Id,
 {
 	bool bFromThisInventory;
 	const bool bSuccessfullyTransferredItem = Execute_HandleTransferItem(this, Id, OtherInventoryInterface, Type, bFromThisInventory);
+	const FName ItemId = GetItemId(Id, Type, bFromThisInventory ? this : OtherInventoryInterface);
 
 	// The client's have trouble accessing other client's inventories (We're just recreating the item with the ItemId)
-	const FName ItemId = GetItemId(Id, Type, bFromThisInventory ? this : OtherInventoryInterface);
 	Client_TransferItemResponse(bSuccessfullyTransferredItem, Id, ItemId, OtherInventoryInterface, Type, bFromThisInventory);
 	
 	if (bDebugInventory_Server)
 	{
-		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() {2} transferred an item to {3}, ({4}) id: {5}", *UEnum::GetValueAsString(GetOwner()->GetLocalRole()),
+		const TScriptInterface<IInventoryInterface> InventoryInterface = OtherInventoryInterface;
+		FString OtherInventoryId = *GetNameSafe(OtherInventoryInterface);
+		if (InventoryInterface.GetInterface()) OtherInventoryId = InventoryInterface->Execute_GetPlayerId(InventoryInterface.GetObject());
+		
+		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() {2} transferred an item to {3}, ({4}) -> {5}({6})", *UEnum::GetValueAsString(GetOwner()->GetLocalRole()),
 			*FString(__FUNCTION__),
-			bFromThisInventory ? *GetNameSafe(GetOwner()) : *GetNameSafe(OtherInventoryInterface),
-			bFromThisInventory ? *GetNameSafe(OtherInventoryInterface) : *GetNameSafe(GetOwner()),
+			bFromThisInventory ? *Execute_GetPlayerId(this) : *OtherInventoryId,
+			bFromThisInventory ? *OtherInventoryId : *Execute_GetPlayerId(this),
 			bSuccessfullyTransferredItem ? "succeeded" : "failed",
-			*Id.ToString()
+			ItemId, *Id.ToString()
 		);
 	}
 }
@@ -266,8 +275,8 @@ bool UInventoryComponent::HandleTransferItem_Implementation(const FGuid& Id, UOb
 	{
 		if (bDebugInventory_Server || bDebugInventory_Client)
 		{
-			UE_LOGFMT(InventoryLog, Error, "({0}) {1}() (invalid/not found) item: {2} searched in {3} and {4}'s inventory", *UEnum::GetValueAsString(GetOwner()->GetLocalRole()),
-				*FString(__FUNCTION__), *Id.ToString(), *GetNameSafe(GetOwner()), *GetNameSafe(OtherInventoryInterface)
+			UE_LOGFMT(InventoryLog, Error, "({0}) {1}() (invalid/not found) id: {2} searched in {3} and {4}'s inventory", *UEnum::GetValueAsString(GetOwner()->GetLocalRole()),
+				*FString(__FUNCTION__), *Id.ToString(), *Execute_GetPlayerId(this), *OtherInventory->Execute_GetPlayerId(OtherInventory.GetObject())
 			);
 		}
 		return false;
@@ -293,10 +302,10 @@ bool UInventoryComponent::HandleTransferItem_Implementation(const FGuid& Id, UOb
 
 	if (bDebugInventory_Server || bDebugInventory_Client)
 	{
-		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() InventoryTransfer: {2} from {3} to {4}'s inventory", *UEnum::GetValueAsString(GetOwner()->GetLocalRole()),
-			*FString(__FUNCTION__), *Id.ToString(),
-			bFromThisInventory ? *GetNameSafe(GetOwner()) : *GetNameSafe(OtherInventoryInterface),
-			bFromThisInventory ? *GetNameSafe(OtherInventoryInterface) : *GetNameSafe(GetOwner())
+		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() InventoryTransfer: {2}({3}) from {4} to {5}'s inventory", *UEnum::GetValueAsString(GetOwner()->GetLocalRole()),
+			*FString(__FUNCTION__), Item.ItemName, *Id.ToString(),
+			bFromThisInventory ? *Execute_GetPlayerId(this) : *OtherInventory->Execute_GetPlayerId(OtherInventory.GetObject()),
+			bFromThisInventory ? *OtherInventory->Execute_GetPlayerId(OtherInventory.GetObject()) : *Execute_GetPlayerId(this)
 		);
 	}
 	return true;
@@ -344,8 +353,8 @@ void UInventoryComponent::Client_TransferItemResponse_Implementation(const bool 
 				if (Item.IsValid()) Execute_InternalAddInventoryItem(this, Item);
 				else if (bDebugInventory_Client || bDebugInventory_Server)
 				{
-					UE_LOGFMT(InventoryLog, Error, "({0}) {1}() invalid/unable to create item: {2} for {3}'s inventory",
-						*UEnum::GetValueAsString(GetOwner()->GetLocalRole()), *FString(__FUNCTION__), *Id.ToString(), *GetNameSafe(GetOwner())
+					UE_LOGFMT(InventoryLog, Error, "({0}) {1}() invalid/unable to create item: {2}({3}) for {4}'s inventory",
+						*UEnum::GetValueAsString(GetOwner()->GetLocalRole()), *FString(__FUNCTION__), DatabaseId, *Id.ToString(), *Execute_GetPlayerId(this)
 					);
 				}
 			}
@@ -361,11 +370,11 @@ void UInventoryComponent::Client_TransferItemResponse_Implementation(const bool 
 	
 	if (bDebugInventory_Client)
 	{
-		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() TransferItemResponse: {2}, {3} transfer item operation ->  {4}, id: {5} ", *UEnum::GetValueAsString(GetOwner()->GetLocalRole()),
+		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() TransferItemResponse: {2}, {3} transfer item operation to {4} ->  {5}({6})", *UEnum::GetValueAsString(GetOwner()->GetLocalRole()),
 			*FString(__FUNCTION__), bSuccess ? "succeeded" : "failed",
-			bFromThisInventory ? *GetNameSafe(GetOwner()) : *GetNameSafe(OtherInventoryInterface),
-			bFromThisInventory ? *GetNameSafe(OtherInventoryInterface) : *GetNameSafe(GetOwner()),
-			*Id.ToString()
+			bFromThisInventory ? *Execute_GetPlayerId(this) : *OtherInventory->Execute_GetPlayerId(OtherInventory.GetObject()),
+			bFromThisInventory ? *OtherInventory->Execute_GetPlayerId(OtherInventory.GetObject()) : *Execute_GetPlayerId(this),
+			DatabaseId, *Id.ToString()
 		);
 	}
 }
@@ -418,41 +427,17 @@ bool UInventoryComponent::TryRemoveItem_Implementation(const FGuid& Id, const EI
 void UInventoryComponent::Server_TryRemoveItem_Implementation(const FGuid& Id, const EItemType Type, const bool bDropItem)
 {
 	UObject* SpawnedItem;
+	FName ItemId = GetItemId(Id, Type, this);
 	const bool bSuccessfullyRemovedItem = Execute_HandleRemoveItem(this, Id, Type, bDropItem, SpawnedItem);
 	Client_RemoveItemResponse(bSuccessfullyRemovedItem, Id, Type, bDropItem, SpawnedItem);
 	
 	if (bDebugInventory_Server)
 	{
-		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() removed item {2}: {3}, id: {4}", *UEnum::GetValueAsString(GetOwner()->GetLocalRole()),
-			*FString(__FUNCTION__), *GetNameSafe(GetOwner()), bSuccessfullyRemovedItem ? "succeeded" : "failed",  *Id.ToString()
-		);
-	}
-}
-
-
-void UInventoryComponent::Client_RemoveItemResponse_Implementation(const bool bSuccess, const FGuid& Id, const EItemType Type, const bool bDropItem, UObject* SpawnedItem)
-{
-	const TScriptInterface<IInventoryItemInterface> SpawnedItemInterface = SpawnedItem;
-	if (!bSuccess)
-	{
-		Execute_HandleRemoveItemFail(this, Id, Type, bDropItem, SpawnedItem);
-		OnInventoryItemRemovalFailure.Broadcast(Id, SpawnedItemInterface);
-	}
-	else
-	{
-		if (ROLE_AutonomousProxy == GetOwner()->GetLocalRole()) // TODO: are extra checks on clients necessary?
-		{
-			Execute_HandleRemoveItem(this, Id, Type, false, SpawnedItem);
-		}
-		
-		Execute_HandleRemoveItemSuccess(this, Id, Type, bDropItem, SpawnedItem);
-		OnInventoryItemRemovalSuccess.Broadcast(Id, SpawnedItemInterface);
-	}
-	
-	if (bDebugInventory_Client)
-	{
-		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() RemoveItemResponse: {2}, {3} remove item operation ->  {4}{5} ", *UEnum::GetValueAsString(GetOwner()->GetLocalRole()),
-			*FString(__FUNCTION__), bSuccess ? "succeeded" : "failed", *GetNameSafe(GetOwner()), *Id.ToString(), bDropItem ? "(dropped)" : ""
+		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() removed item {2}: {3} - {4}({5})",
+			*UEnum::GetValueAsString(GetOwner()->GetLocalRole()), *FString(__FUNCTION__),
+			*Execute_GetPlayerId(this),
+			bSuccessfullyRemovedItem ? "succeeded" : "failed",
+			ItemId, *Id.ToString()
 		);
 	}
 }
@@ -470,7 +455,7 @@ bool UInventoryComponent::HandleRemoveItem_Implementation(const FGuid& Id, const
 			if (bDebugInventory_Server || bDebugInventory_Client)
 			{
 				UE_LOGFMT(InventoryLog, Error, "({0}) {1}() (invalid/not found) item in {2}'s inventory, id: {3}",
-					*UEnum::GetValueAsString(GetOwner()->GetLocalRole()), *FString(__FUNCTION__), *GetNameSafe(GetOwner()), *Id.ToString()
+					*UEnum::GetValueAsString(GetOwner()->GetLocalRole()), *FString(__FUNCTION__), *Execute_GetPlayerId(this), *Id.ToString()
 				);
 			}
 			return false;
@@ -482,13 +467,50 @@ bool UInventoryComponent::HandleRemoveItem_Implementation(const FGuid& Id, const
 
 	if (bDebugInventory_Server || bDebugInventory_Client)
 	{
-		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() InventoryRemoval: {2} - {3} ",
-			*UEnum::GetValueAsString(GetOwner()->GetLocalRole()), *FString(__FUNCTION__), *GetNameSafe(GetOwner()), *Id.ToString()
+		FName ItemId = GetItemId(Id, Type, this);
+		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() InventoryRemoval: {2} - {3}({4}) ",
+			*UEnum::GetValueAsString(GetOwner()->GetLocalRole()), *FString(__FUNCTION__),
+			*Execute_GetPlayerId(this),
+			ItemId, *Id.ToString()
 		);
 	}
 	
 	Execute_InternalRemoveInventoryItem(this, Id, Type);
 	return true;
+}
+
+
+
+void UInventoryComponent::Client_RemoveItemResponse_Implementation(const bool bSuccess, const FGuid& Id, const EItemType Type, const bool bDropItem, UObject* SpawnedItem)
+{
+	const TScriptInterface<IInventoryItemInterface> SpawnedItemInterface = SpawnedItem;
+	FName ItemId = GetItemId(Id, Type, this);
+	
+	if (!bSuccess)
+	{
+		Execute_HandleRemoveItemFail(this, Id, Type, bDropItem, SpawnedItem);
+		OnInventoryItemRemovalFailure.Broadcast(Id, SpawnedItemInterface);
+	}
+	else
+	{
+		if (ROLE_AutonomousProxy == GetOwner()->GetLocalRole()) // TODO: are extra checks on clients necessary?
+			{
+			Execute_HandleRemoveItem(this, Id, Type, false, SpawnedItem);
+			}
+		
+		Execute_HandleRemoveItemSuccess(this, Id, Type, bDropItem, SpawnedItem);
+		OnInventoryItemRemovalSuccess.Broadcast(Id, SpawnedItemInterface);
+	}
+	
+	if (bDebugInventory_Client)
+	{
+		UE_LOGFMT(InventoryLog, Log, "({0}) {1}() RemoveItemResponse: {2}, {3} remove item operation ->  {4}({5}) {6}", *UEnum::GetValueAsString(GetOwner()->GetLocalRole()),
+			*FString(__FUNCTION__), bSuccess ? "succeeded" : "failed",
+			*Execute_GetPlayerId(this),
+			ItemId, *Id.ToString(),
+			bDropItem ? "(dropped)" : ""
+		);
+	}
 }
 
 
@@ -575,17 +597,6 @@ void UInventoryComponent::InternalAddInventoryItem_Implementation(const F_Item& 
 }
 
 
-bool UInventoryComponent::GetItem_Implementation(F_Item& ReturnedItem, FGuid Id, EItemType InventorySectionToSearch)
-{
-	if (!Id.IsValid()) return false;
-
-	// search for the item in the inventory
-	ReturnedItem = Execute_InternalGetInventoryItem(this, Id, InventorySectionToSearch);
-	if (ReturnedItem.IsValid()) return true;
-	return false;
-}
-
-
 TMap<FGuid, F_Item>& UInventoryComponent::GetInventoryList(EItemType InventorySectionToSearch)
 {
 	if (EItemType::Inv_QuestItem == InventorySectionToSearch) return QuestItems;
@@ -601,6 +612,18 @@ TMap<FGuid, F_Item>& UInventoryComponent::GetInventoryList(EItemType InventorySe
 	}
 
 	return CommonItems;
+}
+
+
+
+bool UInventoryComponent::GetItem_Implementation(F_Item& ReturnedItem, FGuid Id, EItemType InventorySectionToSearch)
+{
+	if (!Id.IsValid()) return false;
+
+	// search for the item in the inventory
+	ReturnedItem = Execute_InternalGetInventoryItem(this, Id, InventorySectionToSearch);
+	if (ReturnedItem.IsValid()) return true;
+	return false;
 }
 
 
@@ -663,7 +686,7 @@ TScriptInterface<IInventoryItemInterface> UInventoryComponent::SpawnWorldItem_Im
 			if (bDebugInventory_Server || bDebugInventory_Client)
 			{
 				UE_LOGFMT(InventoryLog, Error, "({0}) {1}() failed to spawn item! {2}'s inventory, item: {3}",
-					*UEnum::GetValueAsString(GetOwner()->GetLocalRole()), *FString(__FUNCTION__), *GetNameSafe(GetOwner()), Item.ItemName
+					*UEnum::GetValueAsString(GetOwner()->GetLocalRole()), *FString(__FUNCTION__), *Execute_GetPlayerId(this), Item.ItemName
 				);
 			}
 		}
@@ -687,99 +710,121 @@ FName UInventoryComponent::GetItemId(const FGuid& Id, EItemType Type, UObject* I
 
 	return Item.ItemName;
 }
+
+
+FString UInventoryComponent::GetPlayerId_Implementation() const
+{
+	return "[" + FString::FromInt(NetId) + "][" + PlatformId + "]";
+}
+
+void UInventoryComponent::SetPlayerId()
+{
+	// Save the net and platform id for determining the character (on both server and client)
+	const UNetDriver* NetDriver = GetWorld()->GetNetDriver();
+	PlatformId = FGenericPlatformMisc::GetLoginId();
+	if (NetDriver && NetDriver->GuidCache.Get())
+	{
+		FNetGUIDCache* NetworkGuids = NetDriver->GuidCache.Get();
+		if (NetworkGuids->NetGUIDLookup.Contains(this)) NetId = NetworkGuids->NetGUIDLookup[this].Value;
+		// UE_LOGFMT(LogTemp, Log, "{0} network guid: {1}, net id: {2}", *GetName(), *NetworkGuids->NetGUIDLookup[this].ToString(), SaveData.NetId);
+	}
+}
 #pragma endregion
 
 
 
 
 #pragma region Print Inventory
-void UInventoryComponent::ListInventoryItem(const F_Item& Item)
+void UInventoryComponent::ListInventory()
+{
+	if (!GetCharacter()) return;
+	
+	TArray<FGuid> ClientItems;
+	for (auto &[Id, Item] : QuestItems) ClientItems.Add(Id);
+	for (auto &[Id, Item] : CommonItems) ClientItems.Add(Id);
+	for (auto &[Id, Item] : Weapons) ClientItems.Add(Id);
+	for (auto &[Id, Item] : Armors) ClientItems.Add(Id);
+	for (auto &[Id, Item] : Materials) ClientItems.Add(Id);
+	for (auto &[Id, Item] : Notes) ClientItems.Add(Id);
+	Server_ListInventory(ClientItems);
+}
+
+
+void UInventoryComponent::Server_ListInventory_Implementation(const TArray<FGuid>& ItemList)
+{
+	if (!GetCharacter()) return;
+	
+	UE_LOGFMT(InventoryLog, Log, " ");
+	UE_LOGFMT(InventoryLog, Log, "//----------------------------------------------------------------------------------------------------------------------------------/");
+	UE_LOGFMT(InventoryLog, Log, "// {0}: [{1}][{2}] {3}'s Inventory", *UEnum::GetValueAsString(Character->GetLocalRole()), NetId, PlatformId, *GetNameSafe(Character));
+	UE_LOGFMT(InventoryLog, Log, "//----------------------------------------------------------------------------------------------------------------------------------/");
+
+	const TArray<FGuid> ClientItems = ItemList;
+	if (!Weapons.IsEmpty()) ListInventoryMap(Weapons, ClientItems, FString("Armaments"));
+	if (!Armors.IsEmpty()) ListInventoryMap(Armors, ClientItems, FString("Armors"));
+	if (!CommonItems.IsEmpty()) ListInventoryMap(CommonItems, ClientItems, FString("Common Items"));
+	if (!QuestItems.IsEmpty()) ListInventoryMap(QuestItems, ClientItems, FString("Quest Items"));
+	if (!Materials.IsEmpty()) ListInventoryMap(Materials, ClientItems, FString("Materials"));
+	if (!Notes.IsEmpty()) ListInventoryMap(Notes, ClientItems, FString("Notes"));
+	
+	UE_LOGFMT(InventoryLog, Log, "//----------------------------------------------------------------------------------------------------------------------------------//");
+	UE_LOGFMT(InventoryLog, Log, " ");
+}
+
+
+void UInventoryComponent::ListInventoryMap(const TMap<FGuid, F_Item>& Map, const TArray<FGuid>& ClientItems, FString ListName)
+{
+	if (!GetCharacter()) return;
+
+	UE_LOGFMT(InventoryLog, Log, " ");
+	UE_LOGFMT(InventoryLog, Log, "//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
+	UE_LOGFMT(InventoryLog, Log, "// {0} ", ListName);
+	UE_LOGFMT(InventoryLog, Log, "//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
+	UE_LOGFMT(InventoryLog, Log, " ");
+	for (auto &[Id, Item] : Map) ListInventoryItem(Item, ClientItems.Contains(Id));
+}
+
+
+void UInventoryComponent::ListInventoryItem(const F_Item& Item, bool bClientContainsItem)
 {
 	if (!GetCharacter() || !Item.IsValid())
 	{
-		UE_LOGFMT(InventoryLog, Error, "{0}: Print Item was called with an invalid item. {1} {2}()", *UEnum::GetValueAsString(Character->GetLocalRole()), *GetNameSafe(Character), *FString(__FUNCTION__));
+		UE_LOGFMT(InventoryLog, Error, "{0}: Print Item was called with an invalid item. {1} {2}()", *UEnum::GetValueAsString(Character->GetLocalRole()), *Execute_GetPlayerId(this), *FString(__FUNCTION__));
 		return;
 	}
 
-	UE_LOGFMT(InventoryLog, Log, "|------------------------------------------/");
-	UE_LOGFMT(InventoryLog, Log, "| ({0}) {1}", Item.SortOrder, *Item.DisplayName);
-	UE_LOGFMT(InventoryLog, Log, "|-----------------------------------------/");
-	UE_LOGFMT(InventoryLog, Log, "| DatabaseId: {0}", Item.ItemName);
-	UE_LOGFMT(InventoryLog, Log, "| Id: {0}", *Item.Id.ToString());
+	UE_LOGFMT(InventoryLog, Log, "|--------------------------------------------------/");
+	UE_LOGFMT(InventoryLog, Log, "| ({0}) {1}, OnClient: {2}", Item.SortOrder, *Item.DisplayName, bClientContainsItem);
+	UE_LOGFMT(InventoryLog, Log, "|-------------------------------------------------/");
+	UE_LOGFMT(InventoryLog, Log, "| Id: {0} ->  {1}", Item.ItemName, *Item.Id.ToString());
 	UE_LOGFMT(InventoryLog, Log, "| Type: {0}", *UEnum::GetValueAsString(Item.ItemType));
 	UE_LOGFMT(InventoryLog, Log, "| Description: {0}", *Item.Description);
 	UE_LOGFMT(InventoryLog, Log, "| ActualClass: {0}", Item.ActualClass ? *Item.ActualClass->GetName() : *FString("null"));
 	UE_LOGFMT(InventoryLog, Log, "| WorldClass: {0}", Item.WorldClass ? *Item.WorldClass->GetName() : *FString("null"));
-	UE_LOGFMT(InventoryLog, Log, "|------------------------------------//");
+	UE_LOGFMT(InventoryLog, Log, "|--------------------------------------------//");
 	UE_LOGFMT(InventoryLog, Log, " ");
 }
 
 
-void UInventoryComponent::ListInventoryMap(const TMap<FGuid, F_Item>& Map, FString ListName)
-{
-	if (!GetCharacter()) return;
-
-	UE_LOGFMT(InventoryLog, Log, " ");
-	UE_LOGFMT(InventoryLog, Log, "//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
-	UE_LOGFMT(InventoryLog, Log, "// {0} ", ListName);
-	UE_LOGFMT(InventoryLog, Log, "//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
-	UE_LOGFMT(InventoryLog, Log, " ");
-	for (auto &[Id, Item] : Map)
-	{
-		ListInventoryItem(Item);
-	}
-}
 
 
-void UInventoryComponent::ListInventory()
+#pragma region Saved Items
+void UInventoryComponent::ListSavedCharacterInformation(const FS_CharacterInformation& Data, FString Message)
 {
 	if (!GetCharacter()) return;
 	UE_LOGFMT(InventoryLog, Log, " ");
+	UE_LOGFMT(InventoryLog, Log, "//----------------------------------------------------------------------------------------------------------------------------------/");
+	UE_LOGFMT(InventoryLog, Log, "// {0}: [{1}][{2}] {3}'s Inventory", *UEnum::GetValueAsString(Character->GetLocalRole()), NetId, PlatformId, *GetNameSafe(Character));
+	UE_LOGFMT(InventoryLog, Log, "//----------------------------------------------------------------------------------------------------------------------------------/");
+	UE_LOGFMT(InventoryLog, Log, "NetId: {0}", Data.NetId);
+	UE_LOGFMT(InventoryLog, Log, "PlatformId: {0}", Data.PlatformId);
 	UE_LOGFMT(InventoryLog, Log, " ");
-	UE_LOGFMT(InventoryLog, Log, "//---------------------------------------------------------------------------------------------/");
-	UE_LOGFMT(InventoryLog, Log, "// ({0}) {1}'s Inventory", *UEnum::GetValueAsString(Character->GetLocalRole()), *GetNameSafe(Character));
-	UE_LOGFMT(InventoryLog, Log, "//--------------------------------------------------------------------------------------------/");
-	UE_LOGFMT(InventoryLog, Log, " ");
-
-	ListInventoryMap(Weapons, FString("Armaments"));
-	ListInventoryMap(Armors, FString("Armors"));
-	ListInventoryMap(CommonItems, FString("Common Items"));
-	ListInventoryMap(QuestItems, FString("Quest Items"));
-
-	/*
-	if (GetCombatBase())
-	{
-		TMap<FGuid, F_Item> LeftHandArmaments;
-		LeftHandArmaments.Add(CombatBase->LeftHandArmament_Slot_One.Id, CombatBase->LeftHandArmament_Slot_One);
-		LeftHandArmaments.Add(CombatBase->LeftHandArmament_Slot_Two.Id, CombatBase->LeftHandArmament_Slot_Two);
-		LeftHandArmaments.Add(CombatBase->LeftHandArmament_Slot_Three.Id, CombatBase->LeftHandArmament_Slot_Three);
-		
-		TMap<FGuid, F_Item> RightHandArmaments;
-		RightHandArmaments.Add(CombatBase->RightHandArmament_Slot_One.Id, CombatBase->RightHandArmament_Slot_One);
-		RightHandArmaments.Add(CombatBase->RightHandArmament_Slot_Two.Id, CombatBase->RightHandArmament_Slot_Two);
-		RightHandArmaments.Add(CombatBase->RightHandArmament_Slot_Three.Id, CombatBase->RightHandArmament_Slot_Three);
-		
-		ListInventoryMap(LeftHandArmaments, FString("Left Hand Equip Slots"));
-		ListInventoryMap(RightHandArmaments, FString("Right Hand Equip Slots"));
-	}
-	*/
 	
-	UE_LOGFMT(InventoryLog, Log, "//---------------------------------------------------------------------------------------//");
+	ListSavedItems(Data.InventoryItems, "Saved Items");
+	UE_LOGFMT(InventoryLog, Log, "//----------------------------------------------------------------------------------------------------------------------------------//");
 	UE_LOGFMT(InventoryLog, Log, " ");
 	UE_LOGFMT(InventoryLog, Log, " ");
 	UE_LOGFMT(InventoryLog, Log, " ");
-}
-
-
-void UInventoryComponent::ListSavedItem(const FS_Item& SavedItem)
-{
-	if (!GetCharacter() || !SavedItem.IsValid())
-	{
-		UE_LOGFMT(InventoryLog, Error, "{0}: ListSavedItem was called with an invalid item. {1} {2}()", *UEnum::GetValueAsString(Character->GetLocalRole()), *GetNameSafe(Character), *FString(__FUNCTION__));
-		return;
-	}
-
-	UE_LOGFMT(InventoryLog, Log, "({0}) DatabaseId: {1}, Id: {2}", SavedItem.SortOrder, SavedItem.ItemName, SavedItem.Id.ToString());
 }
 
 
@@ -788,9 +833,9 @@ void UInventoryComponent::ListSavedItems(const TArray<FS_Item>& List, FString Li
 	if (!GetCharacter()) return;
 
 	UE_LOGFMT(InventoryLog, Log, " ");
-	UE_LOGFMT(InventoryLog, Log, "//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
+	UE_LOGFMT(InventoryLog, Log, "//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
 	UE_LOGFMT(InventoryLog, Log, "// {0} ", ListName);
-	UE_LOGFMT(InventoryLog, Log, "//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
+	UE_LOGFMT(InventoryLog, Log, "//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
 	UE_LOGFMT(InventoryLog, Log, " ");
 	for (FS_Item SavedItem : List)
 	{
@@ -799,82 +844,15 @@ void UInventoryComponent::ListSavedItems(const TArray<FS_Item>& List, FString Li
 }
 
 
-void UInventoryComponent::ListSavedWeaponInformation(const FS_WeaponInformation& SavedWeapon)
+void UInventoryComponent::ListSavedItem(const FS_Item& SavedItem)
 {
-	if (!GetCharacter() || !SavedWeapon.Id.IsValid())
+	if (!GetCharacter() || !SavedItem.IsValid())
 	{
-		UE_LOGFMT(InventoryLog, Error, "{0}: ListSavedWeaponInformation was called with an invalid weapon. {1} {2}()", *UEnum::GetValueAsString(Character->GetLocalRole()), *GetNameSafe(Character), *FString(__FUNCTION__));
+		UE_LOGFMT(InventoryLog, Error, "{0}: ListSavedItem was called with an invalid item. {1} {2}()", *UEnum::GetValueAsString(Character->GetLocalRole()), *Execute_GetPlayerId(this), *FString(__FUNCTION__));
 		return;
 	}
 
-	if (!Weapons.Contains(SavedWeapon.Id))
-	{
-		UE_LOGFMT(InventoryLog, Error, "{0}: {1} -> Did not find the weapon in the player's inventroy! {2}", *UEnum::GetValueAsString(Character->GetLocalRole()), *GetNameSafe(Character), *SavedWeapon.Id.ToString());
-		return;
-	}
-	
-	UE_LOGFMT(InventoryLog, Log, "{1} Id: {1}, Level: {2}", *Weapons[SavedWeapon.Id].DisplayName, SavedWeapon.Id.ToString(), SavedWeapon.Level);
+	UE_LOGFMT(InventoryLog, Log, "({0}) DatabaseId: {1}, Id: {2}", SavedItem.SortOrder, SavedItem.ItemName, SavedItem.Id.ToString());
 }
-
-
-void UInventoryComponent::ListSavedWeapons(const TArray<FS_WeaponInformation>& List)
-{
-	UE_LOGFMT(InventoryLog, Log, " ");
-	UE_LOGFMT(InventoryLog, Log, "//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
-	UE_LOGFMT(InventoryLog, Log, "// Saved Weapon Information ");
-	UE_LOGFMT(InventoryLog, Log, "//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
-	UE_LOGFMT(InventoryLog, Log, " ");
-	for (FS_WeaponInformation SavedWeapon : List)
-	{
-		ListSavedWeaponInformation(SavedWeapon);
-	}
-}
-
-
-void UInventoryComponent::ListSavedCharacterInformation(const FS_CharacterInformation& Data, FString Message)
-{
-	if (!GetCharacter()) return;
-	UE_LOGFMT(InventoryLog, Log, " ");
-	UE_LOGFMT(InventoryLog, Log, " ");
-	UE_LOGFMT(InventoryLog, Log, "//---------------------------------------------------------------------------------------------/");
-	UE_LOGFMT(InventoryLog, Log, "// ({0}) {1} Save/Load data ->  {2}", *UEnum::GetValueAsString(Character->GetLocalRole()), *GetNameSafe(Character), *Message);
-	UE_LOGFMT(InventoryLog, Log, "//--------------------------------------------------------------------------------------------/");
-	UE_LOGFMT(InventoryLog, Log, "NetId: {0}", Data.NetId);
-	UE_LOGFMT(InventoryLog, Log, "PlatformId: {0}", Data.PlatformId);
-	UE_LOGFMT(InventoryLog, Log, " ");
-
-	
-	// UE_LOGFMT(InventoryLog, Log, "|------------------------------------------/");
-	// UE_LOGFMT(InventoryLog, Log, "| Weapons");
-	// UE_LOGFMT(InventoryLog, Log, "|-----------------------------------------/");
-	// if (Data.LeftHandWeapons.Num() > 0)
-	// {
-	// 	ListSavedItem(FS_Item(Data.LeftHandWeapons[0].Id, Data.LeftHandWeapons[0].SortOrder, Data.LeftHandWeapons[0].ItemId, Data.LeftHandWeapons[0].RowName));
-	// 	if (Data.LeftHandWeapons.Num() > 1) ListSavedItem(FS_Item(Data.LeftHandWeapons[1].Id, Data.LeftHandWeapons[1].SortOrder, Data.LeftHandWeapons[1].ItemId, Data.LeftHandWeapons[1].RowName));
-	// 	if (Data.LeftHandWeapons.Num() > 2) ListSavedItem(FS_Item(Data.LeftHandWeapons[2].Id, Data.LeftHandWeapons[2].SortOrder, Data.LeftHandWeapons[2].ItemId, Data.LeftHandWeapons[2].RowName));
-	// }
-	// if (Data.RightHandWeapons.Num() > 0)
-	// {
-	// 	ListSavedItem(FS_Item(Data.RightHandWeapons[0].Id, Data.RightHandWeapons[0].SortOrder, Data.RightHandWeapons[0].ItemId, Data.RightHandWeapons[0].RowName));
-	// 	if (Data.RightHandWeapons.Num() > 1) ListSavedItem(FS_Item(Data.RightHandWeapons[1].Id, Data.RightHandWeapons[1].SortOrder, Data.RightHandWeapons[1].ItemId, Data.RightHandWeapons[1].RowName));
-	// 	if (Data.RightHandWeapons.Num() > 2) ListSavedItem(FS_Item(Data.RightHandWeapons[2].Id, Data.RightHandWeapons[2].SortOrder, Data.RightHandWeapons[2].ItemId, Data.RightHandWeapons[2].RowName));
-	// }
-	// UE_LOGFMT(InventoryLog, Log, " ");
-	//
-	// UE_LOGFMT(InventoryLog, Log, "|------------------------------------------/");
-	// UE_LOGFMT(InventoryLog, Log, "| Armor");
-	// UE_LOGFMT(InventoryLog, Log, "|-----------------------------------------/");
-	// if (Data.Gauntlets.IsValid()) ListSavedItem(FS_Item(Data.Gauntlets.Id, Data.Gauntlets.SortOrder, Data.Gauntlets.ItemId, Data.Gauntlets.RowName));
-	// if (Data.Leggings.IsValid()) ListSavedItem(FS_Item(Data.Leggings.Id, Data.Leggings.SortOrder, Data.Leggings.ItemId, Data.Leggings.RowName));
-	// if (Data.Helm.IsValid()) ListSavedItem(FS_Item(Data.Helm.Id, Data.Helm.SortOrder, Data.Helm.ItemId, Data.Helm.RowName));
-	// if (Data.Chest.IsValid()) ListSavedItem(FS_Item(Data.Chest.Id, Data.Chest.SortOrder, Data.Chest.ItemId, Data.Chest.RowName));
-	// UE_LOGFMT(InventoryLog, Log, " ");
-	
-	ListSavedItems(Data.InventoryItems, "Saved Items");
-	// ListSavedWeapons(Data.WeaponInformation);
-	UE_LOGFMT(InventoryLog, Log, "//---------------------------------------------------------------------------------------//");
-	UE_LOGFMT(InventoryLog, Log, " ");
-	UE_LOGFMT(InventoryLog, Log, " ");
-	UE_LOGFMT(InventoryLog, Log, " ");
-}
+#pragma endregion 
 #pragma endregion 

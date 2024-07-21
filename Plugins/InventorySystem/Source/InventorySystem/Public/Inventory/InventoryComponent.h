@@ -44,6 +44,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) UDataTable* ItemDatabase;
 
 	/** References and stored information */
+	UPROPERTY(BlueprintReadWrite) int32 NetId;
+	UPROPERTY(BlueprintReadWrite) FString PlatformId;
 	UPROPERTY(BlueprintReadWrite) TObjectPtr<ACharacter> Character;
 
 	/** Other */
@@ -304,15 +306,26 @@ public:
 	virtual void InternalAddInventoryItem_Implementation(const F_Item& Item) override;
 	
 	
+public:
+	/** Returns the Item Id from a specific item in the inventory  */
+	UFUNCTION() virtual FName GetItemId(const FGuid& Id, EItemType Type, UObject* InventoryInterface);
+	
+	/** Returns the character's id (a combination of both the NetId and the PlatformId */
+	virtual FString GetPlayerId_Implementation() const override;
+
+	/** Finds the NetId and Platform Id of the player, and sets those values */
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities") virtual void SetPlayerId();
+	
+	
 protected:
+	/** Returns the inventory list specific to the item's type */
+	UFUNCTION(BlueprintCallable) virtual TMap<FGuid, F_Item>& GetInventoryList(EItemType InventorySectionToSearch);
+
 	/**
 	 * Returns an item from one of the lists in this component.
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	virtual bool GetItem_Implementation(F_Item& ReturnedItem, FGuid Id, EItemType InventorySectionToSearch = EItemType::Inv_None) override;
-
-	/** Returns the inventory list specific to the item's type */
-	UFUNCTION(BlueprintCallable) virtual TMap<FGuid, F_Item>& GetInventoryList(EItemType InventorySectionToSearch);
 	
 	/**
 	 *	Returns an item from the database
@@ -320,11 +333,11 @@ protected:
 	 */
 	virtual bool GetDataBaseItem_Implementation(FName Id, F_Item& Item) override;
 
-	/** Checks if the character is valid and if not, gets the character component and returns true */
-	UFUNCTION(BlueprintCallable) virtual bool GetCharacter();
-	
 	/** Creates the inventory item object for adding things to the inventory. If you want to subclass the inventory object, use this function */
 	virtual F_Item* CreateInventoryObject() const override;
+	
+	/** Checks if the character is valid and if not, gets the character component and returns true */
+	UFUNCTION(BlueprintCallable) virtual bool GetCharacter();
 	
 	/**
 	 * Spawn an item into the world
@@ -332,19 +345,17 @@ protected:
 	 * */
 	virtual TScriptInterface<IInventoryItemInterface> SpawnWorldItem_Implementation(const F_Item& Item, const FTransform& Location) override;
 
-	/** Returns the Item Id from a specific item in the inventory  */
-	UFUNCTION() virtual FName GetItemId(const FGuid& Id, EItemType Type, UObject* InventoryInterface);
 	
+protected:
 	/** Printing inventory information -> @ref ListInventory, ListSavedCharacterInformation  */
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Utility|Printing") virtual void ListInventoryItem(const F_Item& Item);
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Utility|Printing") virtual void ListInventoryMap(const TMap<FGuid, F_Item>& Map, FString ListName);
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Utility|Printing") virtual void ListInventory();
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Printing") virtual void ListInventory();
+	UFUNCTION(Server, Reliable, Category = "Inventory|Utilities|Printing") virtual void Server_ListInventory(const TArray<FGuid>& ItemList);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Printing") virtual void ListInventoryMap(const TMap<FGuid, F_Item>& Map, const TArray<FGuid>& ClientItems, FString ListName);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Printing") virtual void ListInventoryItem(const F_Item& Item, bool bClientContainsItem);
 
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Utility|Printing") virtual void ListSavedItem(const FS_Item& SavedItem);
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Utility|Printing") virtual void ListSavedItems(const TArray<FS_Item>& List, FString ListName);
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Utility|Printing") virtual void ListSavedWeaponInformation(const FS_WeaponInformation& SavedWeapon);
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Utility|Printing") virtual void ListSavedWeapons(const TArray<FS_WeaponInformation>& List);
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Utility|Printing") virtual void ListSavedCharacterInformation(const FS_CharacterInformation& Data, FString Message);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Printing") virtual void ListSavedItem(const FS_Item& SavedItem);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Printing") virtual void ListSavedItems(const TArray<FS_Item>& List, FString ListName);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Printing") virtual void ListSavedCharacterInformation(const FS_CharacterInformation& Data, FString Message);
 
 		
 };

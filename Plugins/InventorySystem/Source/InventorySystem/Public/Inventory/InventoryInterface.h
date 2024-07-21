@@ -282,20 +282,27 @@ public:
 	virtual void InternalRemoveInventoryItem_Implementation(const FGuid& Id, EItemType InventorySectionToSearch = EItemType::Inv_None);
 	
 	
-protected:
+public:
 	/**
 	 * Returns an item from one of the lists in this component.
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Utility", meta = (DisplayName = "Get Item"))
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Utilities", meta = (DisplayName = "Get Item"))
 	bool GetItem(UPARAM(ref) F_Item& ReturnedItem, FGuid Id, EItemType InventorySectionToSearch = EItemType::Inv_None);
 	virtual bool GetItem_Implementation(F_Item& ReturnedItem, FGuid Id, EItemType InventorySectionToSearch = EItemType::Inv_None);
+	
+	/** Returns the character's id (a combination of both the NetId and the PlatformId */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Utilities")
+	FString GetPlayerId() const;
+	virtual FString GetPlayerId_Implementation() const;
 
+
+protected:
 	/**
 	 *	Returns an item from the database
 	 *  @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Utility", meta = (DisplayName = "Get Database Item"))
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Utilities", meta = (DisplayName = "Get Database Item"))
 	bool GetDataBaseItem(FName Id, F_Item& Item);
 	virtual bool GetDataBaseItem_Implementation(FName Id, F_Item& Item);
 
@@ -306,7 +313,7 @@ protected:
 	 * Spawn an item into the world
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Utility", meta = (DisplayName = "Spawn Item"))
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Utilities", meta = (DisplayName = "Spawn Item"))
 	TScriptInterface<IInventoryItemInterface> SpawnWorldItem(const F_Item& Item, const FTransform& Location);
 	virtual TScriptInterface<IInventoryItemInterface> SpawnWorldItem_Implementation(const F_Item& Item, const FTransform& Location);
 

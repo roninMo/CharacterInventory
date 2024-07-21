@@ -93,6 +93,11 @@ bool IInventoryInterface::GetItem_Implementation(F_Item& ReturnedItem, FGuid Id,
 	return false;
 }
 
+FString IInventoryInterface::GetPlayerId_Implementation() const
+{
+	return FString();
+}
+
 bool IInventoryInterface::GetDataBaseItem_Implementation(FName Id, F_Item& Item)
 {
 	return false;
