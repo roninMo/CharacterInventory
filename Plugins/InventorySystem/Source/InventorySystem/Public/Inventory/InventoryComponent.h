@@ -336,16 +336,16 @@ protected:
 	UFUNCTION(Client, Reliable) virtual void Client_LoadSaveDataCompleted();
 
 	/**
-	 * Updates the inventory information with the player state's current save data. This is called in HandleSaveInformation during play based on the SaveState of the inventory
+	 * Updates the inventory information with the player state's current save data. This is called in UpdateInventoryAfterRetrievingSaveInformation() during play based on the SaveState of the inventory
 	 * 
 	 * @param SaveInformation			The save information object containing the player's inventory information
 	 * 
 	 * @returns true if every inventory item is successfully added
 	 */
-	UFUNCTION(BlueprintCallable) virtual bool UpdateInventoryInformation(const F_InventorySaveInformation& SaveInformation);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Saving and Loading") virtual bool UpdateInventoryInformation(const F_InventorySaveInformation& SaveInformation);
 	
 	/** Function for handling the save state information once a player loads the inventory information. Updates the inventory if they retrieved new save information */
-	UFUNCTION(BlueprintCallable) virtual void UpdateInventoryAfterRetrievingSaveInformation();
+	UFUNCTION(Category = "Inventory|Saving and Loading") virtual void UpdateInventoryAfterRetrievingSaveInformation();
 	
 	/** Create a save item from an inventory item */
 	UFUNCTION(BlueprintCallable, Category = "Inventory|Saving and Loading") virtual FS_Item CreateSavedItem(const F_Item& Item) const;
@@ -388,8 +388,11 @@ public:
 	
 	
 protected:
-	/** Returns the inventory list specific to the item's type */
-	UFUNCTION(BlueprintCallable) virtual TMap<FGuid, F_Item>& GetInventoryList(EItemType InventorySectionToSearch);
+	/**
+	 * Returns the inventory list specific to the item's type
+	 * @returns One of the inventory lists from this component
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory") virtual TMap<FGuid, F_Item>& GetInventoryList(EItemType InventorySectionToSearch);
 
 	/**
 	 * Returns an item from one of the lists in this component.
@@ -407,13 +410,16 @@ protected:
 	virtual F_Item* CreateInventoryObject() const override;
 	
 	/** Access the save state on the client to know when to update the character information */
-	UFUNCTION(BlueprintCallable) virtual ESaveState GetSaveState();
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Saving and Loading") virtual ESaveState GetSaveState();
 	
 	/** Access the save state on the client to know when to update the character information */
-	UFUNCTION(BlueprintCallable) virtual void SetSaveState(ESaveState State);
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Saving and Loading") virtual void SetSaveState(ESaveState State);
 
-	/** Checks if the character is valid and if not, gets the character component and returns true */
-	UFUNCTION(BlueprintCallable) virtual bool GetCharacter();
+	/**
+	 * Checks if the character is valid and if not, gets the character component and returns true
+	 * @returns true whether the character is valid
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities") virtual bool GetCharacter();
 	
 	/**
 	 * Spawn an item into the world

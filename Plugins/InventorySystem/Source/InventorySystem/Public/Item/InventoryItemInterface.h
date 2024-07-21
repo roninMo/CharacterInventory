@@ -26,36 +26,36 @@ public:
 // Inventory item functions																					//
 //----------------------------------------------------------------------------------------------------------//
 	/** Returns the item's information */
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Item") 
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory Item") 
 	F_Item GetItem() const;
 	virtual F_Item GetItem_Implementation() const;
 	
 	/** Returns the type of item */
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Item") 
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory Item") 
 	const EItemType GetItemType() const;
 	virtual const EItemType GetItemType_Implementation() const;
 	
 	
 	/** Returns the id of this instance of an item */
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Item") 
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory Item") 
 	const FGuid GetId() const;
 	virtual const FGuid GetId_Implementation() const;
 	
 	
 	/** Returns the database name of this item */
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Item") 
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory Item") 
 	const FName GetItemName() const;
 	virtual const FName GetItemName_Implementation() const;
 
 
 	/** Function for editing the inventory item */
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Item") 
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory Item") 
 	void SetItem(const F_Item ItemData);
 	virtual void SetItem_Implementation(const F_Item Data);
 
 
 	/** Adjusts the unique id for the inventory object version of this item (If not already set) */
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Item") 
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory Item") 
 	void SetId(const FGuid& Id);
 	virtual void SetId_Implementation(const FGuid& Id);
 	
@@ -65,27 +65,30 @@ public:
 //----------------------------------------------------------------------------------------------------------//
 	/**
 	 * Server side function that acts like a threadlock to prevent multiple from trying to perform operations on an item at the same time
+	 * 
 	 * @remarks Do not override this unless you're refactoring
 	 */
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Item|Networking")
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory Item|Networking")
 	bool IsSafeToAdjustItem() const;
 	virtual bool IsSafeToAdjustItem_Implementation() const;
 	
 	/**
-	 * Sets whether a player is already attempting to interact with this item 
+	 * Sets whether a player is already attempting to interact with this item
+	 * 
 	 * @remarks Do not override this unless you're refactoring
 	 * @note this should determine whether it's safe to adjust an item (only use on the server)
 	 */
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Item|Networking")
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory Item|Networking")
 	void SetPlayerPending(ACharacter* Player);
 	virtual void SetPlayerPending_Implementation(ACharacter* Player);
 
 	/**
-	 * Gets whether a player is already attempting to interact with this item 
+	 * Gets whether a player is already attempting to interact with this item
+	 * 
 	 * @remarks Do not override this unless you're refactoring
 	 * @note this should determine whether it's safe to adjust an item (only use on the server)
 	 */
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Item|Networking")
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory Item|Networking")
 	ACharacter* GetPlayerPending();
 	virtual ACharacter* GetPlayerPending_Implementation();
 	
@@ -93,8 +96,8 @@ public:
 //----------------------------------------------------------------------------------------------------------//
 // Utility																									//
 //----------------------------------------------------------------------------------------------------------//
-	/** Adds the item information database */
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Item") 
+	/** Adds the information database to retrieve this item's information (If not created and replicated during spawn) */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory Item|Utilities") 
 	void SetItemInformationDatabase(UDataTable* Database);
 	virtual void SetItemInformationDatabase_Implementation(UDataTable* Database);
 	

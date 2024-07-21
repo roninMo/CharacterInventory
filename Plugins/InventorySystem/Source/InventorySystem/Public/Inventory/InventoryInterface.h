@@ -286,7 +286,7 @@ public:
 	 * Returns an item from one of the lists in this component.
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Utilities", meta = (DisplayName = "Get Item"))
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory", meta = (DisplayName = "Get Item from Inventory"))
 	bool GetItem(UPARAM(ref) F_Item& ReturnedItem, FGuid Id, EItemType InventorySectionToSearch = EItemType::Inv_None);
 	virtual bool GetItem_Implementation(F_Item& ReturnedItem, FGuid Id, EItemType InventorySectionToSearch = EItemType::Inv_None);
 	
@@ -297,19 +297,20 @@ public:
 	
 	
 protected:
-	/**
-	 *	Returns an item from the database
-	 *  @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
-	 */
+	/** Returns an item from the database */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Utilities", meta = (DisplayName = "Get Database Item"))
 	bool GetDataBaseItem(FName Id, F_Item& Item);
 	virtual bool GetDataBaseItem_Implementation(FName Id, F_Item& Item);
 
-	/** Creates the inventory item object for adding things to the inventory. If you want to subclass the inventory object, use this function */
+	/**
+	 * Creates the inventory item object for adding things to the inventory.
+	 *
+	 * @remarks If you want to subclass the Item object, use this function. And if you create any Items, do it with this function
+	 */
 	virtual F_Item* CreateInventoryObject() const;
 	
 	/**
-	 * Spawn an item into the world
+	 * Spawns an inventory item in the world
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Inventory|Utilities", meta = (DisplayName = "Spawn Item"))
