@@ -980,6 +980,8 @@ void UInventoryComponent::Server_ListInventory_Implementation(const TArray<FS_It
 	
 	// List the inventory items on client and server
 	TMap<FGuid, FName> AllInventoryItems = ServerInventoryList;
+	UE_LOGFMT(InventoryLog, Log, "|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\\");
+	UE_LOGFMT(InventoryLog, Log, "| Server/Client Synchronization");
 	UE_LOGFMT(InventoryLog, Log, "|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
 	UE_LOGFMT(InventoryLog, Log, "| Id                                 | OnServer | OnClient | Display Name ");
 	UE_LOGFMT(InventoryLog, Log, "|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
@@ -1039,22 +1041,16 @@ void UInventoryComponent::ListInventoryItem(const F_Item& Item)
 void UInventoryComponent::ListSavedInventory(const F_InventorySaveInformation& Data)
 {
 	if (!GetCharacter()) return;
-	UE_LOGFMT(InventoryLog, Log, "////~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
-	UE_LOGFMT(InventoryLog, Log, "// {0}::SavedInventory() [{1}][{2}] {3}'s Inventory", *UEnum::GetValueAsString(Character->GetLocalRole()), NetId, PlatformId, *GetNameSafe(Character));
-	UE_LOGFMT(InventoryLog, Log, "////~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
-	ListSavedItems(Data.InventoryItems, "Saved Items");
-	UE_LOGFMT(InventoryLog, Log, "//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//");
-	UE_LOGFMT(InventoryLog, Log, " ");
-}
-
-
-void UInventoryComponent::ListSavedItems(const TArray<FS_Item>& List, FString ListName)
-{
-	if (!GetCharacter()) return;
-	for (FS_Item SavedItem : List)
+	UE_LOGFMT(InventoryLog, Log, "|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
+	UE_LOGFMT(InventoryLog, Log, "| {0}::SavedInventory() [{1}][{2}] {3}'s Inventory", *UEnum::GetValueAsString(Character->GetLocalRole()), NetId, PlatformId, *GetNameSafe(Character));
+	UE_LOGFMT(InventoryLog, Log, "|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
+	for (FS_Item SavedItem : Data.InventoryItems)
 	{
 		ListSavedItem(SavedItem);
 	}
+	
+	UE_LOGFMT(InventoryLog, Log, " ");
+	UE_LOGFMT(InventoryLog, Log, "|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
 }
 
 
@@ -1066,7 +1062,7 @@ void UInventoryComponent::ListSavedItem(const FS_Item& SavedItem)
 		return;
 	}
 
-	UE_LOGFMT(InventoryLog, Log, "({0}) {1}({2})", SavedItem.SortOrder, SavedItem.ItemName, SavedItem.Id.ToString());
+	UE_LOGFMT(InventoryLog, Log, "| {0}({1}) ({2})", SavedItem.ItemName, SavedItem.Id.ToString(), SavedItem.SortOrder);
 }
 #pragma endregion 
 #pragma endregion 

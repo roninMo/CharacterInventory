@@ -38,23 +38,23 @@ class INVENTORYSYSTEM_API UInventoryComponent : public UActorComponent, public I
 
 protected:
 	/** I've divided the inventory into maps for quick retrieval, however you're able to build with arrays and other things if you want to adjust the logic */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) TMap<FGuid, F_Item> QuestItems;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) TMap<FGuid, F_Item> CommonItems;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) TMap<FGuid, F_Item> Weapons;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) TMap<FGuid, F_Item> Armors;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) TMap<FGuid, F_Item> Materials;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) TMap<FGuid, F_Item> Notes;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) UDataTable* ItemDatabase;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory") TMap<FGuid, F_Item> QuestItems;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory") TMap<FGuid, F_Item> CommonItems;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory") TMap<FGuid, F_Item> Weapons;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory") TMap<FGuid, F_Item> Armors;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory") TMap<FGuid, F_Item> Materials;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory") TMap<FGuid, F_Item> Notes;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory") UDataTable* ItemDatabase;
 
 	/** References and stored information */
 	/** The client's Net Id */
-	UPROPERTY(BlueprintReadWrite) int32 NetId;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Inventory") int32 NetId;
 
 	/** The Id of the current machine of the player  */
-	UPROPERTY(BlueprintReadWrite) FString PlatformId;
+	UPROPERTY(BlueprintReadWrite, Category = "Inventory") FString PlatformId;
 
 	/** A reference to the character */
-	UPROPERTY(BlueprintReadWrite) TObjectPtr<ACharacter> Character;
+	UPROPERTY(BlueprintReadWrite, Category = "Inventory") TObjectPtr<ACharacter> Character;
 
 	/** Other */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debugging") bool bDebugSaveInformation;
@@ -432,11 +432,10 @@ protected:
 	/** Listing inventory information -> @ref ListInventory, ListSavedCharacterInformation  */
 	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Listing") virtual void ListInventory();
 	UFUNCTION(Server, Reliable, Category = "Inventory|Utilities|Listing") virtual void Server_ListInventory(const TArray<FS_Item>& ClientItemList, bool bCalledFromServer);
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Listing") virtual void ListInventoryMap(const TMap<FGuid, F_Item>& Map, FString ListName);
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Listing") virtual void ListInventoryItem(const F_Item& Item);
+	UFUNCTION(Category = "Inventory|Utilities|Listing") virtual void ListInventoryMap(const TMap<FGuid, F_Item>& Map, FString ListName);
+	UFUNCTION(Category = "Inventory|Utilities|Listing") virtual void ListInventoryItem(const F_Item& Item);
 
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Listing") virtual void ListSavedItem(const FS_Item& SavedItem);
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Listing") virtual void ListSavedItems(const TArray<FS_Item>& List, FString ListName);
+	UFUNCTION(Category = "Inventory|Utilities|Listing") virtual void ListSavedItem(const FS_Item& SavedItem);
 	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities|Listing") virtual void ListSavedInventory(const F_InventorySaveInformation& Data);
 
 		
