@@ -317,7 +317,7 @@ protected:
 	UPROPERTY(BlueprintReadWrite, Transient, Category = "Inventory|Saving") ESaveState SaveState;
 
 	/** The current inventory save data. This isn't updated until the server has sent all it's inventory information */
-	UPROPERTY(BlueprintReadWrite,  Transient, Category = "Inventory|Saving") F_InventorySaveInformation CurrentInventorySaveData;
+	UPROPERTY(BlueprintReadWrite, Transient, Category = "Inventory|Saving") F_InventorySaveInformation CurrentInventorySaveData;
 
 	/** This is a value to store the information that's sent to the client. Once everything has been sent to the client, the current inventory save data is updated with this information */
 	UPROPERTY(BlueprintReadWrite, Transient, Category = "Inventory|Saving") F_InventorySaveInformation ClientInventorySaveData;

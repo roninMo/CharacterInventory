@@ -1049,7 +1049,7 @@ void UInventoryComponent::ListSavedInventory(const F_InventorySaveInformation& D
 		ListSavedItem(SavedItem);
 	}
 	
-	UE_LOGFMT(InventoryLog, Log, " ");
+	UE_LOGFMT(InventoryLog, Log, "| ");
 	UE_LOGFMT(InventoryLog, Log, "|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/");
 }
 
