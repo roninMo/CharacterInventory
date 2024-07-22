@@ -4,7 +4,7 @@ The `Camera System` helps with logic for handling smooth transitions between dif
 
 An `Inventory System` for player's for storing and retrieving different inventory items in multiplayer with error handling in a safe and efficient way that even allows for customization, and works out of the box. All you need to do is add the component to the character, and store and retrieve values from it. There's also logic for saving information, just search through the function list in the blueprint.
 
-![InventorySystem_Image](https://github.com/user-attachments/assets/7ba2ef76-e5fa-4cda-ba7e-5e3b0a9a726f)
+![InventorySystem_Image](/images/InventorySystem_Image.png)
 
 `Hopefully this saves you time and effort while you're developing things`
 
@@ -15,7 +15,8 @@ An `Inventory System` for player's for storing and retrieving different inventor
 # Setup
 Add the `Inventory` to the character's components, and everything's ready to go. You'll also need to create a data table to store the item information, and add that reference to the inventory component. The tutorial teaches you how to handle this, and there's also an example in blueprints with reference to the primary functions
 
-![InventoryTutorial_7](https://github.com/user-attachments/assets/30d2b933-bfc9-485e-8a50-effeedb19544)
+![InventorySystem_Image](/images/InventoryTutorial_7.png)
+
 
 
 
@@ -32,7 +33,7 @@ Add the `Inventory` to the character's components, and everything's ready to go.
 ## Create a character
 Begin by creating a character! (Everything in the inventory is handled in a component, we just need a character)
 
-![InventoryTutorial_0](https://github.com/user-attachments/assets/e0c0a113-20d5-4cad-8e19-44682ec77d2d)
+![InventorySystem_Image](/images/InventoryTutorial_0.png)
 
 
 
@@ -41,7 +42,7 @@ Begin by creating a character! (Everything in the inventory is handled in a comp
 ## Add the Inventory Component
 Add the inventory component by searching for `Inventory`, and add it to the character.
 
-![InventoryTutorial_1](https://github.com/user-attachments/assets/1ffa812b-23fc-4855-9f36-e6c167bce5b5)
+![InventorySystem_Image](/images/InventoryTutorial_1.png)
 
 
 
@@ -50,7 +51,7 @@ Add the inventory component by searching for `Inventory`, and add it to the char
 ## Inventory Function List
 There's a lot of functions on the inventory component, for storing/retrieving, networking, and error handling things so I'll just reference the functions you'll use, and then a list of what everything does after. I don't advise customizing things unless you know what you're doing, either way, here we go
 
-![InventoryTutorial_2](https://github.com/user-attachments/assets/e21ea21a-f6cf-40d5-8477-a2bca7b8ffc5)
+![InventorySystem_Image](/images/InventoryTutorial_2.png)
 
 
 
@@ -59,11 +60,11 @@ There's a lot of functions on the inventory component, for storing/retrieving, n
 ### Primary Functions
 For storing and retrieving items, there's `GetItem()`, `TryAddItem`, `TryRemoveItem()`, `TryTransferItem()`. These all can be called from the client or the server, and are backwards compatible and have error handling that you can add your Hud and other things to for handling inventory adjustments.
 
-![InventoryTutorial_4](https://github.com/user-attachments/assets/7d07e51a-d8e7-4a31-b772-95db81883f84)
+![InventorySystem_Image](/images/InventoryTutorial_4.png)
 
 Here's a list of the callback functions for storing and retrieving inventory items. These are for handling the different scenarios for inventory edits
 
-![InventoryTutorial_3](https://github.com/user-attachments/assets/b0981f2f-9e10-4aed-846d-97fc167b6c9a)
+![InventorySystem_Image](/images/InventoryTutorial_3.png)
 
 
 #### GetItem()
@@ -116,13 +117,14 @@ There's too many functions to talk about, just search through the list and refer
 Inventory items are a reference to an item's information, with customization and efficiency in mind to help with building the inventory. The inventory component retrieves it's information from the inventory item database, and that has information for the inventory hud, and references to the inventory item's components. There's examples of how to create everything 
 already, this is just for reference
 
-![InventoryTutorial_5](https://github.com/user-attachments/assets/3b78cdd4-f91a-480d-929c-84edc1473cde)
+![InventorySystem_Image](/images/InventoryTutorial_5.png)
 
 
 ### Creating an Inventory Item
 The inventory component uses the `IInventoryItemInterface` to determine whether an item is valid, and this project comes with the ItemBase class that it uses for spawning items. It has built in logic for inventory item information and logic, and I'd just use that instead of recreating different logic. The only things that you need to do when you create an inventory item from the `ItemBase` class is add a reference to the Inventory Items database, add it's id, and call the `RetrieveItemFromDataTable()` during BeginPlay. That way if you adjust anything you don't have to handle every instance, and just the original logic
 
-![InventoryTutorial_6](https://github.com/user-attachments/assets/2bcd3124-dad1-4d70-9dd9-82a4f163c346)
+![InventorySystem_Image](/images/InventoryTutorial_6.png)
+
 
 
 
