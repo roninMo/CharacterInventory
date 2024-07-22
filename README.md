@@ -84,36 +84,33 @@ If you want to edit any of these functions (I don't advise this everything alrea
 
 
 ### Values and Function List
+Here's a list of the `InventoryComponent`'s values and functions
+
 #### Values
-| CameraStyle 							| Description						|
-| ---									                         | -----------						|
-| CameraStyle							                   | The current style of the camera that determines the behavior. The default styles are `Fixed`, `Spectator`, `FirstPerson`, `ThirdPerson`, `TargetLocking`, and `Aiming`. You can also add your own in the BasePlayerCameraManager class |
-| CameraOrientation 					              | These are based on the client, but need to be replicated for late joining clients, so we're using both RPC's and replication to achieve this |
-| CameraOrientation Transition Speed 	 | The camera orientation transition speed |
-| Target Lock Transition Speed 			     | Controls how quickly the camera transitions between targets. `ACharacterCameraLogic`'s **TargetLockTransitionSpeed** value adjusts this |
-| Camera Offset First Person 			       | The first person camera's location |
-| Camera Offset Center 					           | The third person camera's default location |
-| Camera Offset Left 					             | The third person camera's left side location |
-| Camera Offset Right 					            | The third person camera's right side location |
-| Camera Lag 							                   | The camera lag of the arm. @remarks This overrides the value of the camera arm's lag |
-| Target Arm Length 					              | The target arm length of the camera arm. @remarks This overrides the value of the camera arm's target arm length |
-| Input Pressed Replication Interval 	 | The interval for when the player is allowed to transition between camera styles. This is used for network purposes |
-	
+| Values 							| Description						|
+| ---								| -----------						|
+|
+| Quest Items							| Inventory Container for quest items |
+| Common Items							| Inventory Container for items |
+| Weapons							| Inventory Container for weapons |
+| Armors							| Inventory Container for armors |
+| Materials							| Inventory Container for materials |
+| Notes								| Inventory Container for notes |
+| Item Database							| A reference to the item data table that contains the items for your game |
+
+| NetId								| The client's Net Id (This is unique for every client) |
+| Platform Id							| The machines Platforms Id (This is unique for every machine) |
+| Character							| A reference to the character |
+
+| Debug Save Information					| Debugs loading and saving the inventory information |
+| Debug Inventory (Client)					| Debugs inventory during client logic |
+| Debug Inventory (Server)					| Debugs inventory during server logic |
+
+
 #### Functions
-| CameraStyle 							| Description						|
-| ---									                         | -----------						|
-| CameraStyle							                   | The current style of the camera that determines the behavior. The default styles are `Fixed`, `Spectator`, `FirstPerson`, `ThirdPerson`, `TargetLocking`, and `Aiming`. You can also add your own in the BasePlayerCameraManager class |
-| CameraOrientation 					              | These are based on the client, but need to be replicated for late joining clients, so we're using both RPC's and replication to achieve this |
-| CameraOrientation Transition Speed 	 | The camera orientation transition speed |
-| Target Lock Transition Speed 			     | Controls how quickly the camera transitions between targets. `ACharacterCameraLogic`'s **TargetLockTransitionSpeed** value adjusts this |
-| Camera Offset First Person 			       | The first person camera's location |
-| Camera Offset Center 					           | The third person camera's default location |
-| Camera Offset Left 					             | The third person camera's left side location |
-| Camera Offset Right 					            | The third person camera's right side location |
-| Camera Lag 							                   | The camera lag of the arm. @remarks This overrides the value of the camera arm's lag |
-| Target Arm Length 					              | The target arm length of the camera arm. @remarks This overrides the value of the camera arm's target arm length |
-| Input Pressed Replication Interval 	 | The interval for when the player is allowed to transition between camera styles. This is used for network purposes |
-	
+There's too many functions to talk about, just search through the list and reference the code for understanding things. For the primary functions, there's generally the intial function logic, and then a `Handle` function for handling the actual logic, `Pending` for the client logic during the action, and delegates for the different scenarios for safeguarding and error handling. If you want to custmoize logic, you just need to update the handle and utility functions so that it creates and retrieves the information without any errors. Either way everything is already set so there's no need for customization unless you're adjusting things! 
+
+
 
 
 <br><br />
