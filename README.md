@@ -87,9 +87,9 @@ If you want to edit any of these functions (I don't advise this everything alrea
 Here's a list of the `InventoryComponent`'s values and functions
 
 #### Values
+
 | Values 							| Description						|
 | ---								| -----------						|
-|
 | Quest Items							| Inventory Container for quest items |
 | Common Items							| Inventory Container for items |
 | Weapons							| Inventory Container for weapons |
@@ -97,11 +97,9 @@ Here's a list of the `InventoryComponent`'s values and functions
 | Materials							| Inventory Container for materials |
 | Notes								| Inventory Container for notes |
 | Item Database							| A reference to the item data table that contains the items for your game |
-
 | NetId								| The client's Net Id (This is unique for every client) |
 | Platform Id							| The machines Platforms Id (This is unique for every machine) |
 | Character							| A reference to the character |
-
 | Debug Save Information					| Debugs loading and saving the inventory information |
 | Debug Inventory (Client)					| Debugs inventory during client logic |
 | Debug Inventory (Server)					| Debugs inventory during server logic |
