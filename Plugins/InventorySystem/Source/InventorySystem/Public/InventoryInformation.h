@@ -86,7 +86,7 @@ enum class ESaveState : uint8
 
 /**
  *	 Information specific to an item for displaying in the inventory and spawning them in the world
- *	 Also contains the information to access and construct the specific item that the character has taken
+ *	 Also contains the information to access and construct the specific item that the character has created
  */
 USTRUCT(BlueprintType)
 struct F_Item
@@ -145,14 +145,15 @@ public:
 
 	/**
 	 * The actual class of this item. This could be from a weapon to an activatable item, and it's information is mapped through the item type.
+	 * 
 	 * @remarks This should reference the inventory interface or use the ItemBase class
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) TSubclassOf<UObject> ActualClass;
 	
 	/**
 	 * The class of this item that's spawned in the world that the character interacts with.
-	 * @remarks This should reference the inventory interface or use the ItemBase class
 	 * 
+	 * @remarks This should reference the inventory interface or use the ItemBase class
 	 */	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) TSubclassOf<AItemBase> WorldClass;
 	
@@ -205,8 +206,8 @@ public:
 
 /**
  * This is the data table to hold all the item information for the game.
- * All objects derive from this information
- * @note This is the raw item information, everything in the game has been configured to use @ref F_InventoryItem because it holds information unique to that instance
+ * All objects derive from this information, and have references to their individual classes. Any saved data like weapon levels needs to be saved individually, I'd just handle this with the inventory component
+ * 
  * @ref I would add the unique information using another object that's linked to the item, for performance reasons. Otherwise you'll have to refactor networking code and that impacts performance 
  */
 USTRUCT(BlueprintType)

@@ -8,7 +8,7 @@
 #include "Net/UnrealNetwork.h"
 
 // Sets default values
-AItemBase::AItemBase()
+AItemBase::AItemBase(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	// Network values
 	PrimaryActorTick.bCanEverTick = false;

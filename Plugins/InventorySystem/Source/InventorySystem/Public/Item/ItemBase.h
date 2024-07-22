@@ -31,7 +31,7 @@ protected:
 	
 public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	AItemBase();
+	AItemBase(const FObjectInitializer& ObjectInitializer);
 
 	/** Function for dynamically adding default information to inventory items */
 	virtual void InitializeItemGlobals();
@@ -59,19 +59,22 @@ public:
 	
 	/**
 	 * Server side function that acts like a threadlock to prevent multiple from trying to perform operations on an item at the same time
+	 * 
 	 * @remarks Do not override this unless you're refactoring
 	 */
 	virtual bool IsSafeToAdjustItem_Implementation() const override;
 	
 	/**
-	 * Sets whether a player is already attempting to interact with this item 
+	 * Sets whether a player is already attempting to interact with this item
+	 * 
 	 * @remarks Do not override this unless you're refactoring
 	 * @note this should determine whether it's safe to adjust an item (only use on the server)
 	 */
 	virtual void SetPlayerPending_Implementation(ACharacter* Player) override;
 	
 	/**
-	 * Gets whether a player is already attempting to interact with this item 
+	 * Gets whether a player is already attempting to interact with this item
+	 * 
 	 * @remarks Do not override this unless you're refactoring
 	 * @note this should determine whether it's safe to adjust an item (only use on the server)
 	 */

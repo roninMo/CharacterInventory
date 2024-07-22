@@ -91,8 +91,8 @@ public:
 	 * @param Type										The item type (used for item allocation)
 	 * @returns		True if the item was found in the database and successfully added to the inventory.
 	 * 
-	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 * @note For handling the ui, I'd add delegates on the response functions for update notifications on the player's inventory
+	 * @remarks Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	virtual bool TryAddItem_Implementation(const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type) override;
 
@@ -100,8 +100,9 @@ public:
 protected:
 	/**
 	 * What should happen assuming the item is added
+	 * 
 	 * @note If the item isn't successfully added then @ref HandleItemAdditionFail should be called, otherwise @ref HandleItemAdditionSuccess is called
-	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 * @remarks Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 * */
 	virtual void AddItemPendingClientLogic_Implementation(const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type) override;
 	
@@ -112,14 +113,17 @@ protected:
 	
 	/**
 	 * The actual logic that handles adding the item to an inventory component
+	 * 
 	 * @return The id of the newly created item
-	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 * 
+	 * @remarks Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	virtual F_Item HandleAddItem_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type) override;
 	
 	/**
 	 * If the item was not added to the inventory
-	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 * 
+	 * @remarks Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	virtual void HandleItemAdditionFail_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type) override;
 
@@ -128,7 +132,8 @@ protected:
 	
 	/**
 	 * If the item was successfully added to the inventory
-	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 * 
+	 * @remarks Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	virtual void HandleItemAdditionSuccess_Implementation(const FGuid& Id, const FName DatabaseId, UObject* InventoryItemInterface, const EItemType Type) override;
 
@@ -158,8 +163,8 @@ public:
 	 * @param Type										The item type (used for item allocation)
 	 * @returns		True if the item was successfully transferred to the other inventory.
 	 * 
-	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 * @note For handling the ui, I'd add delegates on the response functions for update notifications on the player's inventory
+	 * @remarks Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	virtual bool TryTransferItem_Implementation(const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type) override;
 
@@ -167,8 +172,10 @@ public:
 protected:
 	/**
 	 * What should happen assuming the item is transferred
+	 *
 	 * @note If the item isn't successfully transferred then @ref HandleTransferItemAdditionFail should be called, otherwise @ref HandleTransferItemAdditionSuccess is called
-	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 * 
+	 * @remarks Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 * */
 	virtual void TransferItemPendingClientLogic_Implementation(const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type) override;
 	
@@ -179,8 +186,10 @@ protected:
 	
 	/**
 	 * The actual logic that handles transferring the item to the other inventory component
+	 * 
 	 * @return True if it was able to transfer the item
-	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 * 
+	 * @remarks Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	virtual bool HandleTransferItem_Implementation(const FGuid& Id, UObject* OtherInventoryInterface, const EItemType Type, bool& bFromThisInventory) override;
 	
@@ -192,13 +201,14 @@ protected:
 	 * @param Type										The item type (used for item allocation)
 	 * @param bAddItem									Whether the item is being added or removed from the inventory
 	 * 
-	 * @remark Client logic doesn't have any problems when invoking the handle logic on the client response functions, it's just problematic when there's multiple Clients (During a transfer)
+	 * @remarks Client logic doesn't have any problems when invoking the handle logic on the client response functions, it's just problematic when there's multiple Clients (During a transfer)
 	 */
 	UFUNCTION(Client, Reliable) virtual void Client_HandleTransferItemForOtherInventory(const FGuid& Id, const FName DatabaseId, const EItemType Type, const bool bAddItem);
 	
 	/**
-	 * If the item was not transferred to the other inventory 
-	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 * If the item was not transferred to the other inventory
+	 * 
+	 * @remarks Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	virtual void HandleTransferItemFail_Implementation(const FGuid& Id, UObject* OtherInventoryInterface, bool bFromThisInventory) override;
 
@@ -206,8 +216,9 @@ protected:
 	UPROPERTY(BlueprintAssignable, Category = "Inventory|Operations") FInventoryItemTransferFailureDelegate OnInventoryItemTransferFailure;
 	
 	/**
-	 * If the item was successfully transferred to the other inventory 
-	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 * If the item was successfully transferred to the other inventory
+	 * 
+	 * @remarks Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	virtual void HandleTransferItemSuccess_Implementation(const FGuid& Id, UObject* OtherInventoryInterface, bool bFromThisInventory) override;
 
@@ -225,7 +236,7 @@ public:
 	 * @param Type										The item type (used for item allocation)
 	 * @param bAddItem									Whether the item is being added or removed from the inventory
 	 * 
-	 * @remark Client logic doesn't have any problems when invoking the handle logic on the client response functions, it's just problematic when there's multiple Clients (During a transfer)
+	 * @remarks Client logic doesn't have any problems when invoking the handle logic on the client response functions, it's just problematic when there's multiple Clients (During a transfer)
 	 */
 	virtual void HandleTransferItemForOtherInventoryClientLogic(const FGuid& Id, const FName DatabaseId, const EItemType Type, const bool bAddItem) override;
 	
@@ -250,8 +261,8 @@ public:
 	 * @param bDropItem				Whether the item should be spawned in the world when removed
 	 * @returns		True if the item was found in the database and successfully added to the inventory.
 	 * 
-	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 * @note For handling the ui, I'd add delegates on the response functions for update notifications on the player's inventory
+	 * @remarks Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	virtual bool TryRemoveItem_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem) override;
 	
@@ -259,8 +270,9 @@ public:
 protected:
 	/**
 	 * What should happen assuming the item is removed
+	 * 
 	 * @note If the item isn't successfully removed then @ref HandleRemoveItemAdditionFail should be called, otherwise @ref HandleRemoveItemAdditionSuccess is called
-	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 * @remarks Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 * */
 	virtual void RemoveItemPendingClientLogic_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem) override;
 	
@@ -271,14 +283,16 @@ protected:
 	
 	/**
 	 * The actual logic that handles removing the item from the inventory component
-	 * @return True if it was able to remove the item
+	 *
+	 * @note If the item isn't successfully removed then @ref HandleRemoveItemAdditionFail should be called, otherwise @ref HandleRemoveItemAdditionSuccess is called
 	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
-	 */
+	 * */
 	virtual bool HandleRemoveItem_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem, UObject*& SpawnedItem) override;
 	
 	/**
-	 * If the item was not removed from the inventory 
-	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 * If the item was not removed from the inventory
+	 * 
+	 * @remarks Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	virtual void HandleRemoveItemFail_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem, UObject* SpawnedItem) override;
 
@@ -287,7 +301,8 @@ protected:
 	
 	/**
 	 * If the item was successfully removed from the inventory
-	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 * 
+	 * @remarks Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	virtual void HandleRemoveItemSuccess_Implementation(const FGuid& Id, const EItemType Type, bool bDropItem, UObject* SpawnedItem) override;
 	
@@ -302,7 +317,7 @@ protected:
 	UPROPERTY(BlueprintReadWrite, Transient, Category = "Inventory|Saving") ESaveState SaveState;
 
 	/** The current inventory save data. This isn't updated until the server has sent all it's inventory information */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Transient, Category = "Inventory|Saving") F_InventorySaveInformation CurrentInventorySaveData;
+	UPROPERTY(BlueprintReadWrite,  Transient, Category = "Inventory|Saving") F_InventorySaveInformation CurrentInventorySaveData;
 
 	/** This is a value to store the information that's sent to the client. Once everything has been sent to the client, the current inventory save data is updated with this information */
 	UPROPERTY(BlueprintReadWrite, Transient, Category = "Inventory|Saving") F_InventorySaveInformation ClientInventorySaveData;
@@ -358,29 +373,33 @@ protected:
 public:
 	/**
 	 * Returns a copy of an item from the player's inventory. This function shouldn't be called directly, and should only be called on the server.
-	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place (Server side logic between two inventory component interfaces)
+	 * 
+	 * @remarks Blueprints do not need to handle this logic unless they want to override the logic already in place (Server side logic between two inventory component interfaces)
 	 */
 	virtual F_Item InternalGetInventoryItem_Implementation(const FGuid& Id, EItemType InventorySectionToSearch = EItemType::Inv_None) override;
-		
-	/**
-	 * Removes an item from the player's inventory. This function shouldn't be called directly, and should only be called on the server.
-	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
-	 * @note these are only used for specific cases where there isn't a traditional way of editing the inventory (Server side logic between two inventory component interfaces)
-	 */
-	virtual void InternalRemoveInventoryItem_Implementation(const FGuid& Id, EItemType InventorySectionToSearch = EItemType::Inv_None) override;
 	
 	/**
 	 * Adds an item from the player's inventory. This function shouldn't be called directly, and should only be called on the server.
-	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place (Server side logic between two inventory component interfaces)
+	 *
+	 * @remarks Blueprints do not need to handle this logic unless they want to override the logic already in place (Server side logic between two inventory component interfaces)
 	 */
 	virtual void InternalAddInventoryItem_Implementation(const F_Item& Item) override;
+		
+	/**
+	 * Removes an item from the player's inventory. This function shouldn't be called directly, and should only be called on the server.
+	 * 
+	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 * 
+	 * @remark these are only used for specific cases where there isn't a traditional way of editing the inventory (Server side logic between two inventory component interfaces)
+	 */
+	virtual void InternalRemoveInventoryItem_Implementation(const FGuid& Id, EItemType InventorySectionToSearch = EItemType::Inv_None) override;
 	
 	
 public:
 	/** Returns the Item Id from a specific item in the inventory  */
 	UFUNCTION() virtual FName GetItemId(const FGuid& Id, EItemType Type, UObject* OtherInventory = nullptr);
 	
-	/** Returns the character's id (a combination of both the NetId and the PlatformId */
+	/** Returns the character's id (a combination of both the NetId and the PlatformId) */
 	virtual FString GetPlayerId_Implementation() const override;
 
 	/** Finds the NetId and Platform Id of the player, and sets those values */
@@ -396,17 +415,23 @@ protected:
 
 	/**
 	 * Returns an item from one of the lists in this component.
-	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 * 
+	 * @remarks Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	virtual bool GetItem_Implementation(F_Item& ReturnedItem, FGuid Id, EItemType InventorySectionToSearch = EItemType::Inv_None) override;
 	
 	/**
 	 *	Returns an item from the database
-	 *  @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 *  @remarks Blueprints do not need to handle this logic unless they want to override the logic already in place
 	 */
 	virtual bool GetDataBaseItem_Implementation(FName Id, F_Item& Item) override;
-
-	/** Creates the inventory item object for adding things to the inventory. If you want to subclass the inventory object, use this function */
+	
+	/**
+	 * Creates the inventory item object for adding things to the inventory.
+	 * If you want to subclass the inventory object, use this function
+	 * 
+	 * @remarks If you want to subclass the Item object, use this function. And if you create any Items, do it with this function
+	 */
 	virtual F_Item* CreateInventoryObject() const override;
 	
 	/** Access the save state on the client to know when to update the character information */
@@ -422,9 +447,10 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Inventory|Utilities") virtual bool GetCharacter();
 	
 	/**
-	 * Spawn an item into the world
-	 * @remark Blueprints do not need to handle this logic unless they want to override the logic already in place
-	 * */
+	 * Spawns an inventory item in the world
+	 * 
+	 * @remarks Blueprints do not need to handle this logic unless they want to override the logic already in place
+	 */
 	virtual TScriptInterface<IInventoryItemInterface> SpawnWorldItem_Implementation(const F_Item& Item, const FTransform& Location) override;
 	
 	

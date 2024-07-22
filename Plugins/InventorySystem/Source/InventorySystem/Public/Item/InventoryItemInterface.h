@@ -64,7 +64,7 @@ public:
 // Networking functions																						//
 //----------------------------------------------------------------------------------------------------------//
 	/**
-	 * Server side function that acts like a threadlock to prevent multiple from trying to perform operations on an item at the same time
+	 * Server side function that acts like a threadlock to prevent multiple players from trying to perform operations on an item at the same time
 	 * 
 	 * @remarks Do not override this unless you're refactoring
 	 */

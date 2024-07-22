@@ -3,7 +3,6 @@
 
 #include "Item/InventoryItemInterface.h"
 
-// Add default functionality here for any IInventoryItemInterface functions that are not pure virtual.
 F_Item IInventoryItemInterface::GetItem_Implementation() const
 {
 	return F_Item();
