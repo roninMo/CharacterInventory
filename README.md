@@ -11,7 +11,7 @@ An `Inventory System` for player's for storing and retrieving different inventor
 
 
 
-<br/>
+<br><br/>
 # Setup
 Add the `Inventory` to the character's components, and everything's ready to go. You'll also need to create a data table to store the item information, and add that reference to the inventory component. The tutorial teaches you how to handle this, and there's also an example in blueprints with reference to the primary functions
 
@@ -19,7 +19,7 @@ Add the `Inventory` to the character's components, and everything's ready to go.
 
 
 
-<br/>
+<br><br/>
 # Tutorial 
 
 
@@ -28,7 +28,7 @@ Add the `Inventory` to the character's components, and everything's ready to go.
  - 
 
 
-<br/>
+<br><br/>
 ## Create a character
 Begin by creating a character! (Everything in the inventory is handled in a component, we just need a character)
 
@@ -37,7 +37,7 @@ Begin by creating a character! (Everything in the inventory is handled in a comp
 
 
 
-<br/>
+<br><br/>
 ## Add the Inventory Component
 Add the inventory component by searching for `Inventory`, and add it to the character.
 
@@ -46,7 +46,7 @@ Add the inventory component by searching for `Inventory`, and add it to the char
 
 
 
-<br />
+<br><br />
 ## Inventory Function List
 There's a lot of functions on the inventory component, for storing/retrieving, networking, and error handling things so I'll just reference the functions you'll use, and then a list of what everything does after. I don't advise customizing things unless you know what you're doing, either way, here we go
 
@@ -55,7 +55,7 @@ There's a lot of functions on the inventory component, for storing/retrieving, n
 
 
 
-<br />
+<br><br />
 ### Primary Functions
 For storing and retrieving items, there's `GetItem()`, `TryAddItem`, `TryRemoveItem()`, `TryTransferItem()`. These all can be called from the client or the server, and are backwards compatible and have error handling that you can add your Hud and other things to for handling inventory adjustments.
 
@@ -116,7 +116,7 @@ If you want to edit any of these functions (I don't advise this everything alrea
 	
 
 
-<br />
+<br><br />
 ## Inventory Items
 Inventory items are a reference to an item's information, with customization and efficiency in mind to help with building the inventory. The inventory component retrieves it's information from the inventory item database, and that has information for the inventory hud, and references to the inventory item's components. There's examples of how to create everything 
 already, this is just for reference
