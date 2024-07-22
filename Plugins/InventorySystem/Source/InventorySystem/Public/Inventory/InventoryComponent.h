@@ -30,36 +30,41 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLoadSaveDataInventoryDelegate, bo
 
 // TODO: Technically this doesn't account for dedicated servers yet, however there shouldn't be any problems
 
-
+/**
+ * An inventory system for player's for storing and retrieving different inventory items in multiplayer with error handling in a safe and efficient way that even allows for customization, and works out of the box.
+ * All you need to do is add the component to the character, and store and retrieve values from it. There's also logic for saving information, just search through the function list in the blueprint.
+ *
+ * @remarks We use remote procedure calls so replication doesn't have to try and handle everything, and only pass everything with references when we're storing information
+ */
 UCLASS( Blueprintable, ClassGroup=(Inventory), meta=(BlueprintSpawnableComponent) )
 class INVENTORYSYSTEM_API UInventoryComponent : public UActorComponent, public IInventoryInterface
 {
 	GENERATED_BODY()
 
 protected:
-	/** I've divided the inventory into maps for quick retrieval, however you're able to build with arrays and other things if you want to adjust the logic */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory") TMap<FGuid, F_Item> QuestItems;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory") TMap<FGuid, F_Item> CommonItems;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory") TMap<FGuid, F_Item> Weapons;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory") TMap<FGuid, F_Item> Armors;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory") TMap<FGuid, F_Item> Materials;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory") TMap<FGuid, F_Item> Notes;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory") UDataTable* ItemDatabase;
-
-	/** References and stored information */
+	/**** Inventory ****/ // I've divided the inventory into maps for quick retrieval, however you're able to build with arrays and other things if you want to adjust the logic */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Inventory") TMap<FGuid, F_Item> QuestItems;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Inventory") TMap<FGuid, F_Item> CommonItems;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Inventory") TMap<FGuid, F_Item> Weapons;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Inventory") TMap<FGuid, F_Item> Armors;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Inventory") TMap<FGuid, F_Item> Materials;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Inventory") TMap<FGuid, F_Item> Notes;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Inventory") UDataTable* ItemDatabase;
+	
+	/**** References and stored information ****/
 	/** The client's Net Id */
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Inventory") int32 NetId;
 
 	/** The Id of the current machine of the player  */
-	UPROPERTY(BlueprintReadWrite, Category = "Inventory") FString PlatformId;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Inventory") FString PlatformId;
 
 	/** A reference to the character */
 	UPROPERTY(BlueprintReadWrite, Category = "Inventory") TObjectPtr<ACharacter> Character;
 
-	/** Other */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debugging") bool bDebugSaveInformation;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debugging") bool bDebugInventory_Client;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debugging") bool bDebugInventory_Server;
+	/**** Other ****/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Debugging") bool bDebugSaveInformation;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Debugging") bool bDebugInventory_Client;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Debugging") bool bDebugInventory_Server;
 
 	
 protected:
