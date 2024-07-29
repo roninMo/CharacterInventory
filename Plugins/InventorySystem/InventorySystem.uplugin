@@ -1,24 +1,28 @@
+using UnrealBuildTool;
+using System.IO;
+
+public class InventorySystem : ModuleRules
 {
-	"FileVersion": 3,
-	"Version": 1,
-	"VersionName": "1.0",
-	"FriendlyName": "InventorySystem",
-	"Description": "A multiplayer inventory system for storing and retrieving references to inventory items. It's an efficient way of handling static information, that's customizable and easy to use",
-	"Category": "Inventory",
-	"CreatedBy": "Donamaru",
-	"CreatedByURL": "",
-	"DocsURL": "https://roninmo.github.io/CharacterInventory/",
-	"MarketplaceURL": "",
-	"SupportURL": "",
-	"CanContainContent": true,
-	"IsBetaVersion": false,
-	"IsExperimentalVersion": false,
-	"Installed": false,
-	"Modules": [
-		{
-			"Name": "InventorySystem",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
-		}
-	]
+	public InventorySystem(ReadOnlyTargetRules Target) : base(Target)
+	{
+		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+		
+		PrivateIncludePaths.AddRange(
+			new string[] {
+				Path.Combine(GetModuleDirectory("NetCore"), "Private")
+			}
+		);
+
+		PublicDependencyModuleNames.AddRange(
+			new string[] {
+				"Core",
+				"CoreOnline",
+				"CoreUObject",
+				"Engine",
+				"InputCore",
+				"NetCore",
+			}
+		);
+		
+	}
 }
